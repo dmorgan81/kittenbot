@@ -127,7 +127,7 @@ func HandleRequest(ctx context.Context) error {
 	if _, err := cf.CreateInvalidation(ctx, &cloudfront.CreateInvalidationInput{
 		DistributionId: aws.String(os.Getenv("DISTRIBUTION")),
 		InvalidationBatch: &cftypes.InvalidationBatch{
-			CallerReference: aws.String(name),
+			CallerReference: aws.String(time.Now().UTC().Format("20060102150405")),
 			Paths: &cftypes.Paths{
 				Quantity: aws.Int32(1),
 				Items:    []string{"/index.html"},
