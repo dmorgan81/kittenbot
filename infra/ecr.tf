@@ -5,7 +5,7 @@ resource "aws_ecr_repository" "kittenbot" {
   }
 }
 
-resource "aws_ecr_lifecycle_policy" "foopolicy" {
+resource "aws_ecr_lifecycle_policy" "kittenbot" {
   repository = aws_ecr_repository.kittenbot.name
 
   policy = <<EOF
@@ -27,8 +27,4 @@ resource "aws_ecr_lifecycle_policy" "foopolicy" {
     ]
 }
 EOF
-}
-
-output "kittenbot_repository_url" {
-  value = aws_ecr_repository.kittenbot.repository_url
 }
