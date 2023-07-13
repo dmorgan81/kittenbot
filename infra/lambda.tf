@@ -41,6 +41,14 @@ resource "aws_lambda_function" "kittenbot" {
       "DISTRIBUTION" : aws_cloudfront_distribution.kittenbot.id
     }
   }
+
+  depends_on = [aws_cloudwatch_log_group.lambda]
+}
+
+resource "aws_cloudwatch_log_group" "lambda" {
+  name = format("/aws/lambda/kittenbot")
+  retention_in_days = 7
+  skip_destroy = true
 }
 
 resource "aws_iam_role" "lambda" {
