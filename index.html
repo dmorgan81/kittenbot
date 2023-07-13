@@ -1,0 +1,15 @@
+<html lang="en-US">
+
+<head>
+    <title>KittenBot - Daily AI Generated Kittens</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="prompt" content="{{ .Prompt }}">
+    <meta name="model" content="{{ .Model }}">
+    <meta name="seed" content="{{ .Seed }}">
+</head>
+
+<body>
+    <img src="{{ .Name }}.png" alt="{{ .Prompt }}" style="max-width: 100%; height: auto;">
+</body>
+
+</html>
