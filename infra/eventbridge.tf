@@ -1,9 +1,9 @@
 resource "aws_scheduler_schedule" "kittenbot" {
-  name_prefix = "kittenbot-"
-  schedule_expression = "cron(0 0 * * ? *)" # every midnight
+  name_prefix         = "kittenbot-"
+  schedule_expression = "cron(30 0 * * ? *)" # every day at 00:30 (30 minutes after midnight)
 
   flexible_time_window {
-    mode = "FLEXIBLE"
+    mode                      = "FLEXIBLE"
     maximum_window_in_minutes = 20
   }
 
@@ -12,7 +12,7 @@ resource "aws_scheduler_schedule" "kittenbot" {
     role_arn = aws_iam_role.eventbridge.arn
     retry_policy {
       maximum_event_age_in_seconds = 300
-      maximum_retry_attempts = 3
+      maximum_retry_attempts       = 3
     }
   }
 }
