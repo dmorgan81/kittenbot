@@ -1,0 +1,34 @@
+resource "aws_ecr_repository" "kittenbot" {
+  name = "kittenbot"
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+}
+
+resource "aws_ecr_lifecycle_policy" "foopolicy" {
+  repository = aws_ecr_repository.kittenbot.name
+
+  policy = <<EOF
+{
+    "rules": [
+        {
+            "rulePriority": 1,
+            "description": "Expire images older than 14 days",
+            "selection": {
+                "tagStatus": "untagged",
+                "countType": "sinceImagePushed",
+                "countUnit": "days",
+                "countNumber": 14
+            },
+            "action": {
+                "type": "expire"
+            }
+        }
+    ]
+}
+EOF
+}
+
+output "kittenbot_repository_url" {
+  value = aws_ecr_repository.kittenbot.repository_url
+}
