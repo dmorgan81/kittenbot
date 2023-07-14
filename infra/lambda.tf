@@ -8,16 +8,6 @@ variable "dezgo_key" {
   sensitive = true
 }
 
-variable "prompt" {
-  type        = string
-  description = "Prompt for image generation"
-}
-
-variable "model" {
-  type        = string
-  description = "Model on dezgo to use for image generation"
-}
-
 resource "aws_ssm_parameter" "dezgo_key" {
   name            = "/kittenbot/dezgo-key"
   type            = "SecureString"
@@ -34,8 +24,6 @@ resource "aws_lambda_function" "kittenbot" {
   timeout       = 30
   environment {
     variables = {
-      "PROMPT" : var.prompt
-      "MODEL" : var.model
       "DEZGO_KEY_PARAM" : aws_ssm_parameter.dezgo_key.name
       "BUCKET" : aws_s3_bucket.kittenbot.id
       "DISTRIBUTION" : aws_cloudfront_distribution.kittenbot.id

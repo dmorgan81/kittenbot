@@ -5,6 +5,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"net/http"
 	"os"
@@ -24,7 +25,13 @@ import (
 //go:embed index.html
 var indexTmpl []byte
 
-func HandleRequest(ctx context.Context) error {
+type Event struct {
+	Prompt string `json:"prompt"`
+	Model  string `json:"model"`
+	Seed   string `json:"seed,omitempty"`
+}
+
+func HandleRequest(ctx context.Context, evt Event) error {
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		return err
@@ -35,8 +42,6 @@ func HandleRequest(ctx context.Context) error {
 		return err
 	}
 
-	prompt := os.Getenv("PROMPT")
-	model := os.Getenv("MODEL")
 	key := os.Getenv("DEZGO_KEY")
 	if key == "" {
 		ssmc := ssm.NewFromConfig(cfg)
@@ -50,11 +55,7 @@ func HandleRequest(ctx context.Context) error {
 		key = aws.ToString(out.Parameter.Value)
 	}
 
-	body, err := json.Marshal(map[string]any{
-		"prompt":  prompt,
-		"model":   model,
-		"upscale": 2,
-	})
+	body, err := json.Marshal(evt)
 	if err != nil {
 		return err
 	}
@@ -79,8 +80,8 @@ func HandleRequest(ctx context.Context) error {
 
 	kitten := map[string]string{
 		"Name":   name,
-		"Prompt": prompt,
-		"Model":  model,
+		"Prompt": evt.Prompt,
+		"Model":  evt.Model,
 		"Seed":   seed,
 	}
 
@@ -129,8 +130,11 @@ func HandleRequest(ctx context.Context) error {
 		InvalidationBatch: &cftypes.InvalidationBatch{
 			CallerReference: aws.String(time.Now().UTC().Format("20060102150405")),
 			Paths: &cftypes.Paths{
-				Quantity: aws.Int32(1),
-				Items:    []string{"/index.html"},
+				Quantity: aws.Int32(2),
+				Items: []string{
+					"/index.html",
+					fmt.Sprintf("/%s.png", name),
+				},
 			},
 		},
 	}); err != nil {
@@ -144,7 +148,10 @@ func main() {
 	if _, ok := os.LookupEnv("AWS_LAMBDA_RUNTIME_API"); ok {
 		lambda.Start(HandleRequest)
 	} else {
-		if err := HandleRequest(context.Background()); err != nil {
+		if err := HandleRequest(context.Background(), Event{
+			Prompt: os.Args[1],
+			Model:  os.Args[2],
+		}); err != nil {
 			panic(err)
 		}
 	}

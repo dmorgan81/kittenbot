@@ -1,3 +1,13 @@
+variable "prompt" {
+  type        = string
+  description = "Prompt for image generation"
+}
+
+variable "model" {
+  type        = string
+  description = "Model on dezgo to use for image generation"
+}
+
 resource "aws_scheduler_schedule" "kittenbot" {
   name_prefix         = "kittenbot-"
   schedule_expression = "cron(30 0 * * ? *)" # every day at 00:30 (30 minutes after midnight)
@@ -14,6 +24,10 @@ resource "aws_scheduler_schedule" "kittenbot" {
       maximum_event_age_in_seconds = 300
       maximum_retry_attempts       = 3
     }
+    input = jsonencode({
+      prompt: var.prompt
+      model: var.model
+    })
   }
 }
 
