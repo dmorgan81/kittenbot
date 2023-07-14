@@ -1,0 +1,20 @@
+name: Terraform Apply
+on:
+  push:
+    branches: [ "main" ]
+jobs:
+  image:
+    uses: ./.github/workflows/docker-image.yml
+    secrets: inherit
+  apply:
+    needs: [image]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: hashicorp/setup-terraform@v2
+      with:
+        cli_config_credentials_token: ${{ secrets.TERRAFORM_CLOUD_API_TOKEN }}
+    - uses: actions/checkout@v3
+    - run: terraform init -input=false
+      working-directory: ./infra
+    - run: terraform apply -input=false -auto-approve -var image_tag="${{ github.sha }}"
+      working-directory: ./infra
