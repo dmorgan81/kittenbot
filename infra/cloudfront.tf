@@ -33,6 +33,11 @@ resource "aws_cloudfront_distribution" "kittenbot" {
   price_class         = "PriceClass_100"
   is_ipv6_enabled     = true
 
+  aliases = [
+    var.domain,
+    "www.${var.domain}",
+  ]
+
   default_cache_behavior {
     cache_policy_id        = data.aws_cloudfront_cache_policy.caching_optimized.id
     target_origin_id       = aws_s3_bucket.kittenbot.id
@@ -60,6 +65,9 @@ resource "aws_cloudfront_distribution" "kittenbot" {
   }
 
   viewer_certificate {
-    cloudfront_default_certificate = true
+    cloudfront_default_certificate = false
+    acm_certificate_arn            = aws_acm_certificate.cert.arn
+    minimum_protocol_version       = "TLSv1.2_2021"
+    ssl_support_method             = "sni-only"
   }
 }
