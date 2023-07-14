@@ -1,3 +1,9 @@
+variable "image_tag" {
+  type        = string
+  description = "Image tag for lambda"
+  default     = "latest"
+}
+
 variable "dezgo_key" {
   type        = string
   description = "Dezgo.com API key"
@@ -19,7 +25,7 @@ resource "aws_ssm_parameter" "dezgo_key" {
 resource "aws_lambda_function" "kittenbot" {
   function_name = "kittenbot"
   role          = aws_iam_role.lambda.arn
-  image_uri     = "${aws_ecr_repository.kittenbot.repository_url}:latest"
+  image_uri     = "${aws_ecr_repository.kittenbot.repository_url}:${var.image_tag}"
   package_type  = "Image"
   timeout       = 30
   environment {
