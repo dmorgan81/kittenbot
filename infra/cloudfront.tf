@@ -9,8 +9,36 @@ data "aws_cloudfront_cache_policy" "caching_optimized" {
   name = "Managed-CachingOptimized"
 }
 
+data "aws_cloudfront_response_headers_policy" "security_headers" {
+  name = "Managed-SecurityHeadersPolicy"
+}
+
 resource "aws_cloudfront_response_headers_policy" "kittenbot_png" {
   name = "KittenBotPng"
+
+  security_headers_config {
+    frame_options {
+      frame_option = "SAMEORIGIN"
+      override     = false
+    }
+    referrer_policy {
+      override        = false
+      referrer_policy = "strict-origin-when-cross-origin"
+    }
+    strict_transport_security {
+      access_control_max_age_sec = 31536000
+      override                   = false
+    }
+    xss_protection {
+      override   = false
+      protection = true
+      mode_block = true
+    }
+    content_type_options {
+      override = true
+    }
+  }
+
   custom_headers_config {
     items {
       header   = "X-Robots-Tag"
@@ -39,12 +67,13 @@ resource "aws_cloudfront_distribution" "kittenbot" {
   ]
 
   default_cache_behavior {
-    cache_policy_id        = data.aws_cloudfront_cache_policy.caching_optimized.id
-    target_origin_id       = aws_s3_bucket.kittenbot.id
-    viewer_protocol_policy = "redirect-to-https"
-    allowed_methods        = ["GET", "HEAD"]
-    cached_methods         = ["GET", "HEAD"]
-    compress               = true
+    cache_policy_id            = data.aws_cloudfront_cache_policy.caching_optimized.id
+    target_origin_id           = aws_s3_bucket.kittenbot.id
+    viewer_protocol_policy     = "redirect-to-https"
+    allowed_methods            = ["GET", "HEAD"]
+    cached_methods             = ["GET", "HEAD"]
+    compress                   = true
+    response_headers_policy_id = data.aws_cloudfront_response_headers_policy.security_headers.id
   }
 
   ordered_cache_behavior {

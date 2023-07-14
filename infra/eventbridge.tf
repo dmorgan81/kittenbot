@@ -25,8 +25,8 @@ resource "aws_scheduler_schedule" "kittenbot" {
       maximum_retry_attempts       = 3
     }
     input = jsonencode({
-      prompt: var.prompt
-      model: var.model
+      prompt : var.prompt
+      model : var.model
     })
   }
 }
