@@ -6,13 +6,19 @@
     <meta name="prompt" content="{{ .Prompt }}">
     <meta name="model" content="{{ .Model }}">
     <meta name="seed" content="{{ .Seed }}">
+    <style>
+        img {
+            display: block;
+            height: auto;
+            margin-left: auto;
+            margin-right: auto;
+            max-width: 100%;
+        }
+    </style>
 </head>
 
 <body>
-    <img src="{{ .Name }}.png" alt="{{ .Prompt }}" style="max-width: 100%; height: auto;">
-    <p>{{ .Prompt }}</p>
-    <p>{{ .Model }}</p>
-    <p>{{ .Seed }}</p>
+    <img src="{{ .Name }}.png" alt="{{ .Prompt }}:{{ .Model }}:{{ .Seed }}">
 </body>
 
 </html>
