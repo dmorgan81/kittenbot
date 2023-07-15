@@ -57,8 +57,7 @@ resource "aws_cloudfront_distribution" "kittenbot" {
     origin_id                = aws_s3_bucket.kittenbot.id
   }
 
-  default_root_object = "index.html"
-  price_class         = "PriceClass_100"
+  default_root_object = "latest.html"
   is_ipv6_enabled     = true
 
   aliases = [

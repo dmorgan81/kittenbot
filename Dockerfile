@@ -5,7 +5,7 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 
-COPY *.go index.html ./
+COPY *.go latest.html ./
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build --ldflags '-extldflags "-static"' -o /kittenbot
 
 FROM public.ecr.aws/lambda/go:1

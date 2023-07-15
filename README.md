@@ -14,4 +14,4 @@ To successfully deploy this you will need a few things:
 
 At its core this is simply a static website hosted in S3 and served by CloudFront. CloudFront does most of the heavy lifting, including caching.
 
-An EventBridge schedule invokes a lambda every day. The lambda makes a call to Dezgo to generate an image with the passed in prompt and model; the prompt and model are configured via Terraform variables. The lambda then templates out a new `index.html` and uploads everything to S3. Finally the lambda creates a CloudFront cache invalidation for `index.html` and the generated image.
+An EventBridge schedule invokes a lambda every day. The lambda makes a call to Dezgo to generate an image with the passed in prompt and model; the prompt and model are configured via Terraform variables. The lambda then templates out a new `latest.html` and uploads everything to S3. Finally the lambda creates a CloudFront cache invalidation for `latest.html` and the generated image.

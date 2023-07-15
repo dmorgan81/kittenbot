@@ -22,8 +22,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 )
 
-//go:embed index.html
-var indexTmpl []byte
+//go:embed latest.html
+var latestTmpl []byte
 
 type Event struct {
 	Prompt string `json:"prompt"`
@@ -37,7 +37,7 @@ func HandleRequest(ctx context.Context, evt Event) error {
 		return err
 	}
 
-	tmpl, err := template.New("index").Parse(string(indexTmpl))
+	tmpl, err := template.New("latest").Parse(string(latestTmpl))
 	if err != nil {
 		return err
 	}
@@ -79,7 +79,6 @@ func HandleRequest(ctx context.Context, evt Event) error {
 	bucket := os.Getenv("BUCKET")
 
 	kitten := map[string]string{
-		"Name":   name,
 		"Prompt": evt.Prompt,
 		"Model":  evt.Model,
 		"Seed":   seed,
@@ -88,10 +87,20 @@ func HandleRequest(ctx context.Context, evt Event) error {
 	s3c := s3.NewFromConfig(cfg)
 	uploader := manager.NewUploader(s3c)
 	if _, err := uploader.Upload(ctx, &s3.PutObjectInput{
+		Bucket:      aws.String(bucket),
+		Key:         aws.String("latest.png"),
+		ContentType: aws.String("image/png"),
+		Body:        resp.Body,
+		Metadata:    kitten,
+	}); err != nil {
+		return err
+	}
+
+	if _, err := s3c.CopyObject(ctx, &s3.CopyObjectInput{
 		Bucket:       aws.String(bucket),
 		Key:          aws.String(name + ".png"),
 		ContentType:  aws.String("image/png"),
-		Body:         resp.Body,
+		CopySource:   aws.String(bucket + "/latest.png"),
 		Metadata:     kitten,
 		StorageClass: s3types.StorageClassIntelligentTiering,
 	}); err != nil {
@@ -105,7 +114,7 @@ func HandleRequest(ctx context.Context, evt Event) error {
 
 	if _, err := uploader.Upload(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(bucket),
-		Key:         aws.String("index.html"),
+		Key:         aws.String("latest.html"),
 		ContentType: aws.String("text/html"),
 		Body:        bytes.NewReader(data.Bytes()),
 		Metadata:    kitten,
@@ -117,7 +126,7 @@ func HandleRequest(ctx context.Context, evt Event) error {
 		Bucket:       aws.String(bucket),
 		Key:          aws.String(name + ".html"),
 		ContentType:  aws.String("text/html"),
-		CopySource:   aws.String(bucket + "/index.html"),
+		CopySource:   aws.String(bucket + "/latest.html"),
 		Metadata:     kitten,
 		StorageClass: s3types.StorageClassIntelligentTiering,
 	}); err != nil {
@@ -130,9 +139,10 @@ func HandleRequest(ctx context.Context, evt Event) error {
 		InvalidationBatch: &cftypes.InvalidationBatch{
 			CallerReference: aws.String(time.Now().UTC().Format("20060102150405")),
 			Paths: &cftypes.Paths{
-				Quantity: aws.Int32(3),
+				Quantity: aws.Int32(4),
 				Items: []string{
-					"/index.html",
+					"/latest.html",
+					"/latest.png",
 					fmt.Sprintf("/%s.png", name),
 					fmt.Sprintf("/%s.html", name),
 				},
