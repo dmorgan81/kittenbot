@@ -130,10 +130,11 @@ func HandleRequest(ctx context.Context, evt Event) error {
 		InvalidationBatch: &cftypes.InvalidationBatch{
 			CallerReference: aws.String(time.Now().UTC().Format("20060102150405")),
 			Paths: &cftypes.Paths{
-				Quantity: aws.Int32(2),
+				Quantity: aws.Int32(3),
 				Items: []string{
 					"/index.html",
 					fmt.Sprintf("/%s.png", name),
+					fmt.Sprintf("/%s.html", name),
 				},
 			},
 		},
