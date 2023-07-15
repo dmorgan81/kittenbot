@@ -1,0 +1,24 @@
+<html lang="en">
+
+<head>
+    <title>Kittenbot - Docs</title>
+</head>
+
+<body>
+    <p>Every day <a href="https://kittenbot.io">kittenbot.io</a> is updated with a new, AI generated image.</p>
+    <p>Each day's image name has this date format: <code>yyyyMMdd</code>. For example, <a href="https://kittenbot.io/20230714.png">20230714.png</a>.</p>
+    <p>You may also access the image specific HTML the same way: <a href="https://kittenbot.io/20230714.png">20230714.html</a>.</p>
+    <p>Each image has metadata about how the image was generated:</p>
+    <ul>
+        <li>Model - such as <code>foto_assisted_diffusion</code></li>
+        <li>Prompt - such as <code>cute kitten looking at a cupcake</code></li>
+        <li>Seed - such as <code>4180475869</code></li>
+    </ul>
+    <p>Providing these three inputs on <a href="https://dezgo.com">dezgo.com</a> should reproduce the image.</p>
+    <p>This metadata is provided in two ways:</p>
+    <ul>
+        <li>The response headers <code>x-amz-meta-model</code>, <code>x-amz-meta-prompt</code>, and <code>x-amz-meta-seed</code>.</li>
+        <li>As meta tags in the HTML.</li>
+    </ul>
+</body>
+</html>
