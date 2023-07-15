@@ -6,7 +6,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY *.go index.html ./
-RUN CGO_ENABLED=false GOOS=linux GOARCH=amd64 go build -o /kittenbot
+RUN CGO_ENABLED=false GOOS=linux GOARCH=amd64 go build --ldflags '-extldflags "-static"' -o /kittenbot
 
 FROM public.ecr.aws/lambda/go:1
 
