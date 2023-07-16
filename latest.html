@@ -3,6 +3,7 @@
 <head>
     <title>KittenBot - Daily AI Generated Kittens</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="image" content="{{ .Image }}">
     <meta name="prompt" content="{{ .Prompt }}">
     <meta name="model" content="{{ .Model }}">
     <meta name="seed" content="{{ .Seed }}">
@@ -18,7 +19,7 @@
 </head>
 
 <body>
-    <img src="latest.png" alt="{{ .Prompt }}:{{ .Model }}:{{ .Seed }}">
+    <img src="{{ .Image }}" alt="{{ .Prompt }}:{{ .Model }}:{{ .Seed }}">
 </body>
 
 </html>

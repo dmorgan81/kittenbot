@@ -75,10 +75,11 @@ func HandleRequest(ctx context.Context, evt Event) error {
 	defer resp.Body.Close()
 
 	seed := resp.Header.Get("x-input-seed")
-	name := time.Now().UTC().Format("20060102")
+	now := time.Now().UTC().Format("20060102")
 	bucket := os.Getenv("BUCKET")
 
 	kitten := map[string]string{
+		"Image":  now + ".png",
 		"Prompt": evt.Prompt,
 		"Model":  evt.Model,
 		"Seed":   seed,
@@ -87,22 +88,22 @@ func HandleRequest(ctx context.Context, evt Event) error {
 	s3c := s3.NewFromConfig(cfg)
 	uploader := manager.NewUploader(s3c)
 	if _, err := uploader.Upload(ctx, &s3.PutObjectInput{
-		Bucket:      aws.String(bucket),
-		Key:         aws.String("latest.png"),
-		ContentType: aws.String("image/png"),
-		Body:        resp.Body,
-		Metadata:    kitten,
+		Bucket:       aws.String(bucket),
+		Key:          aws.String(now + ".png"),
+		ContentType:  aws.String("image/png"),
+		Body:         resp.Body,
+		Metadata:     kitten,
+		StorageClass: s3types.StorageClassIntelligentTiering,
 	}); err != nil {
 		return err
 	}
 
 	if _, err := s3c.CopyObject(ctx, &s3.CopyObjectInput{
-		Bucket:       aws.String(bucket),
-		Key:          aws.String(name + ".png"),
-		ContentType:  aws.String("image/png"),
-		CopySource:   aws.String(bucket + "/latest.png"),
-		Metadata:     kitten,
-		StorageClass: s3types.StorageClassIntelligentTiering,
+		Bucket:      aws.String(bucket),
+		Key:         aws.String("latest.png"),
+		ContentType: aws.String("image/png"),
+		CopySource:  aws.String(fmt.Sprintf("%s/%s.png", bucket, now)),
+		Metadata:    kitten,
 	}); err != nil {
 		return err
 	}
@@ -113,22 +114,22 @@ func HandleRequest(ctx context.Context, evt Event) error {
 	}
 
 	if _, err := uploader.Upload(ctx, &s3.PutObjectInput{
-		Bucket:      aws.String(bucket),
-		Key:         aws.String("latest.html"),
-		ContentType: aws.String("text/html"),
-		Body:        bytes.NewReader(data.Bytes()),
-		Metadata:    kitten,
+		Bucket:       aws.String(bucket),
+		Key:          aws.String(now + ".html"),
+		ContentType:  aws.String("text/html"),
+		Body:         bytes.NewReader(data.Bytes()),
+		Metadata:     kitten,
+		StorageClass: s3types.StorageClassIntelligentTiering,
 	}); err != nil {
 		return err
 	}
 
 	if _, err := s3c.CopyObject(ctx, &s3.CopyObjectInput{
-		Bucket:       aws.String(bucket),
-		Key:          aws.String(name + ".html"),
-		ContentType:  aws.String("text/html"),
-		CopySource:   aws.String(bucket + "/latest.html"),
-		Metadata:     kitten,
-		StorageClass: s3types.StorageClassIntelligentTiering,
+		Bucket:      aws.String(bucket),
+		Key:         aws.String("latest.html"),
+		ContentType: aws.String("text/html"),
+		CopySource:  aws.String(fmt.Sprintf("%s/%s.html", bucket, now)),
+		Metadata:    kitten,
 	}); err != nil {
 		return err
 	}
@@ -143,8 +144,8 @@ func HandleRequest(ctx context.Context, evt Event) error {
 				Items: []string{
 					"/latest.html",
 					"/latest.png",
-					fmt.Sprintf("/%s.png", name),
-					fmt.Sprintf("/%s.html", name),
+					fmt.Sprintf("/%s.png", now),
+					fmt.Sprintf("/%s.html", now),
 				},
 			},
 		},
