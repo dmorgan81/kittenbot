@@ -90,7 +90,7 @@ data "aws_iam_policy_document" "lambda" {
 
   statement {
     actions   = ["ssm:GetParametersByPath"]
-    resources = [format("%s/*", substr(aws_ssm_parameter.prompts[0].arn, 0, length(aws_ssm_parameter.prompts[0].arn) - 2))]
+    resources = [substr(aws_ssm_parameter.prompts[0].arn, 0, length(aws_ssm_parameter.prompts[0].arn) - 2)]
   }
 
   statement {
