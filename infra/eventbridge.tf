@@ -1,13 +1,3 @@
-variable "prompt" {
-  type        = string
-  description = "Prompt for image generation"
-}
-
-variable "model" {
-  type        = string
-  description = "Model on dezgo to use for image generation"
-}
-
 resource "aws_scheduler_schedule" "kittenbot" {
   name_prefix         = "kittenbot-"
   schedule_expression = "cron(30 0 * * ? *)" # every day at 00:30 (30 minutes after midnight)
