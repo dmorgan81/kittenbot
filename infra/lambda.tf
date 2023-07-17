@@ -22,6 +22,22 @@ resource "aws_ssm_parameter" "dezgo_key" {
   value           = var.dezgo_key
 }
 
+variable "prompts" {
+  type = list(object({
+    model  = string
+    prompt = string
+  }))
+  description = "Models and prompts"
+}
+
+resource "aws_ssm_parameter" "prompts" {
+  for_each = { for idx, p in var.prompts : idx => format("%s|%s", p.model, p.prompt) }
+
+  name           = format("/kittenbot/prompts/%d", each.key)
+  type           = "String"
+  insecure_value = each.value
+}
+
 resource "aws_lambda_function" "kittenbot" {
   function_name = "kittenbot"
   role          = aws_iam_role.lambda.arn
@@ -31,6 +47,7 @@ resource "aws_lambda_function" "kittenbot" {
   environment {
     variables = {
       "DEZGO_KEY_PARAM" : aws_ssm_parameter.dezgo_key.name
+      "PROMPTS_PARAM" : substr(aws_ssm_parameter.prompts[0].name, 0, length(aws_ssm_parameter.prompts[0].name) - 2)
       "BUCKET" : aws_s3_bucket.kittenbot.id
       "DISTRIBUTION" : aws_cloudfront_distribution.kittenbot.id
     }
@@ -69,6 +86,11 @@ data "aws_iam_policy_document" "lambda" {
   statement {
     actions   = ["ssm:GetParameter"]
     resources = [aws_ssm_parameter.dezgo_key.arn]
+  }
+
+  statement {
+    actions   = ["ssm:GetParametersByPath"]
+    resources = [format("%s/*", substr(aws_ssm_parameter.prompts[0].arn, 0, length(aws_ssm_parameter.prompts[0].arn) - 2))]
   }
 
   statement {

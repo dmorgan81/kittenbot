@@ -7,8 +7,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"math/rand"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-lambda-go/lambda"
@@ -23,28 +25,31 @@ import (
 )
 
 //go:embed latest.html
-var latestTmpl []byte
+var latestTmpl string
 
 type Event struct {
-	Prompt string `json:"prompt"`
-	Model  string `json:"model"`
+	Model  string `json:"model,omitempty"`
+	Prompt string `json:"prompt,omitempty"`
 	Seed   string `json:"seed,omitempty"`
 }
 
 func HandleRequest(ctx context.Context, evt Event) error {
+	rand := rand.New(rand.NewSource(time.Now().Unix()))
+
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		return err
 	}
 
-	tmpl, err := template.New("latest").Parse(string(latestTmpl))
+	tmpl, err := template.New("latest").Parse(latestTmpl)
 	if err != nil {
 		return err
 	}
 
+	ssmc := ssm.NewFromConfig(cfg)
+
 	key := os.Getenv("DEZGO_KEY")
 	if key == "" {
-		ssmc := ssm.NewFromConfig(cfg)
 		out, err := ssmc.GetParameter(ctx, &ssm.GetParameterInput{
 			Name:           aws.String(os.Getenv("DEZGO_KEY_PARAM")),
 			WithDecryption: aws.Bool(true),
@@ -53,6 +58,23 @@ func HandleRequest(ctx context.Context, evt Event) error {
 			return err
 		}
 		key = aws.ToString(out.Parameter.Value)
+	}
+
+	if evt.Model == "" || evt.Prompt == "" {
+		out, err := ssmc.GetParametersByPath(ctx, &ssm.GetParametersByPathInput{
+			Path:           aws.String(os.Getenv("PROMPTS_PARAM")),
+			WithDecryption: aws.Bool(true),
+		})
+		if err != nil {
+			return err
+		}
+		pair := strings.Split(aws.ToString(out.Parameters[rand.Intn(len(out.Parameters))].Value), "|")
+		if evt.Model == "" {
+			evt.Model = pair[0]
+		}
+		if evt.Prompt == "" {
+			evt.Prompt = pair[1]
+		}
 	}
 
 	body, err := json.Marshal(evt)
