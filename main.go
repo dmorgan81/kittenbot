@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"log"
 	"math/rand"
 	"net/http"
 	"os"
@@ -33,7 +34,23 @@ type Event struct {
 	Seed   string `json:"seed,omitempty"`
 }
 
+func (e Event) String() string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("model: %s | prompt: %s", e.Model, e.Prompt))
+	if e.Seed != "" {
+		sb.WriteString(fmt.Sprintf(" | seed: %s", e.Seed))
+	}
+	return sb.String()
+}
+
 func HandleRequest(ctx context.Context, evt Event) error {
+	log := log.Default()
+	log.SetPrefix("KITTENBOT - ")
+	log.Println("HandleRequest called")
+	defer func() {
+		log.Println("HandleRequest finished")
+	}()
+
 	rand := rand.New(rand.NewSource(time.Now().Unix()))
 
 	cfg, err := config.LoadDefaultConfig(ctx)
@@ -50,6 +67,7 @@ func HandleRequest(ctx context.Context, evt Event) error {
 
 	key := os.Getenv("DEZGO_KEY")
 	if key == "" {
+		log.Println("Fetching Dezgo API key from Parameter Store")
 		out, err := ssmc.GetParameter(ctx, &ssm.GetParameterInput{
 			Name:           aws.String(os.Getenv("DEZGO_KEY_PARAM")),
 			WithDecryption: aws.Bool(true),
@@ -61,6 +79,7 @@ func HandleRequest(ctx context.Context, evt Event) error {
 	}
 
 	if evt.Model == "" || evt.Prompt == "" {
+		log.Println("Fetching model/prompt from Parameter Store")
 		out, err := ssmc.GetParametersByPath(ctx, &ssm.GetParametersByPathInput{
 			Path:           aws.String(os.Getenv("PROMPTS_PARAM")),
 			WithDecryption: aws.Bool(true),
@@ -76,6 +95,7 @@ func HandleRequest(ctx context.Context, evt Event) error {
 			evt.Prompt = pair[1]
 		}
 	}
+	log.Print("Event: %s\n", evt)
 
 	body, err := json.Marshal(evt)
 	if err != nil {
@@ -90,6 +110,7 @@ func HandleRequest(ctx context.Context, evt Event) error {
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("X-Dezgo-Key", key)
 
+	log.Println("Generating image via Dezgo")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
@@ -97,6 +118,8 @@ func HandleRequest(ctx context.Context, evt Event) error {
 	defer resp.Body.Close()
 
 	seed := resp.Header.Get("x-input-seed")
+	log.Printf("Image seed: %s\n", seed)
+
 	now := time.Now().UTC().Format("20060102")
 	bucket := os.Getenv("BUCKET")
 
@@ -109,6 +132,8 @@ func HandleRequest(ctx context.Context, evt Event) error {
 
 	s3c := s3.NewFromConfig(cfg)
 	uploader := manager.NewUploader(s3c)
+
+	log.Printf("Uploading %s to %s\n", now+".png", bucket)
 	if _, err := uploader.Upload(ctx, &s3.PutObjectInput{
 		Bucket:       aws.String(bucket),
 		Key:          aws.String(now + ".png"),
@@ -120,6 +145,7 @@ func HandleRequest(ctx context.Context, evt Event) error {
 		return err
 	}
 
+	log.Printf("Copying %s to latest.png\n", now+".png")
 	if _, err := s3c.CopyObject(ctx, &s3.CopyObjectInput{
 		Bucket:      aws.String(bucket),
 		Key:         aws.String("latest.png"),
@@ -135,6 +161,7 @@ func HandleRequest(ctx context.Context, evt Event) error {
 		return err
 	}
 
+	log.Printf("Uploading %s to %s\n", now+".html", bucket)
 	if _, err := uploader.Upload(ctx, &s3.PutObjectInput{
 		Bucket:       aws.String(bucket),
 		Key:          aws.String(now + ".html"),
@@ -146,6 +173,7 @@ func HandleRequest(ctx context.Context, evt Event) error {
 		return err
 	}
 
+	log.Printf("Copying %s to latest.png\n", now+".html")
 	if _, err := s3c.CopyObject(ctx, &s3.CopyObjectInput{
 		Bucket:      aws.String(bucket),
 		Key:         aws.String("latest.html"),
@@ -156,9 +184,11 @@ func HandleRequest(ctx context.Context, evt Event) error {
 		return err
 	}
 
+	distribution := os.Getenv("DISTRIBUTION")
+	log.Printf("Invaliding created files in CloudFront distribution %s\n", distribution)
 	cf := cloudfront.NewFromConfig(cfg)
 	if _, err := cf.CreateInvalidation(ctx, &cloudfront.CreateInvalidationInput{
-		DistributionId: aws.String(os.Getenv("DISTRIBUTION")),
+		DistributionId: aws.String(distribution),
 		InvalidationBatch: &cftypes.InvalidationBatch{
 			CallerReference: aws.String(time.Now().UTC().Format("20060102150405")),
 			Paths: &cftypes.Paths{
