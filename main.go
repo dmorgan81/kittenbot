@@ -1,222 +1,181 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"html/template"
-	"log"
-	"math/rand"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/cloudfront"
-	cftypes "github.com/aws/aws-sdk-go-v2/service/cloudfront/types"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	"github.com/dmorgan81/kittenbot/internal/image"
+	"github.com/dmorgan81/kittenbot/internal/page"
+	"github.com/dmorgan81/kittenbot/internal/param"
+	"github.com/dmorgan81/kittenbot/internal/prompt"
+	"github.com/dmorgan81/kittenbot/internal/store"
+	"github.com/go-logr/logr"
+	"github.com/go-logr/stdr"
+	"github.com/samber/lo"
 )
 
-//go:embed latest.html
-var latestTmpl string
-
-type Event struct {
+type Params struct {
+	Id     string `json:"id,omitempty"`
 	Model  string `json:"model,omitempty"`
 	Prompt string `json:"prompt,omitempty"`
 	Seed   string `json:"seed,omitempty"`
 }
 
-func (e Event) String() string {
-	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("model: %s | prompt: %s", e.Model, e.Prompt))
-	if e.Seed != "" {
-		sb.WriteString(fmt.Sprintf(" | seed: %s", e.Seed))
+func (p Params) toImageParams() image.Params {
+	return image.Params{
+		Model:  p.Model,
+		Prompt: p.Prompt,
+		Seed:   p.Seed,
 	}
-	return sb.String()
 }
 
-func HandleRequest(ctx context.Context, evt Event) error {
-	log := log.Default()
-	log.SetPrefix("KITTENBOT - ")
-	log.Println("HandleRequest called")
-	defer func() {
-		log.Println("HandleRequest finished")
-	}()
-
-	rand := rand.New(rand.NewSource(time.Now().Unix()))
-
-	cfg, err := config.LoadDefaultConfig(ctx)
-	if err != nil {
-		return err
+func (p Params) toPageParams() page.Params {
+	return page.Params{
+		Image:  p.Id + ".png",
+		Model:  p.Model,
+		Prompt: p.Prompt,
+		Seed:   p.Seed,
 	}
+}
 
-	tmpl, err := template.New("latest").Parse(latestTmpl)
-	if err != nil {
-		return err
+func (p Params) toMetadata() map[string]string {
+	return map[string]string{
+		"Id":     p.Id,
+		"Model":  p.Model,
+		"Prompt": p.Prompt,
+		"Seed":   p.Seed,
 	}
+}
 
-	ssmc := ssm.NewFromConfig(cfg)
+type Handler struct {
+	Randomizer  *prompt.Randomizer
+	Generator   image.Generator
+	Templator   *page.Templator
+	Uploader    store.Uploader
+	Invalidator store.Invalidator
+}
 
-	key := os.Getenv("DEZGO_KEY")
-	if key == "" {
-		log.Println("Fetching Dezgo API key from Parameter Store")
-		out, err := ssmc.GetParameter(ctx, &ssm.GetParameterInput{
-			Name:           aws.String(os.Getenv("DEZGO_KEY_PARAM")),
-			WithDecryption: aws.Bool(true),
-		})
+func (h *Handler) HandleRequest(ctx context.Context, params Params) (Params, error) {
+	ctx = logr.NewContext(ctx, stdr.New(nil))
+	log := logr.FromContextOrDiscard(ctx).WithValues("params", params)
+	log.Info("handling lambda invocation")
+
+	if params.Model == "" || params.Prompt == "" {
+		model, prompt, err := h.Randomizer.Randomize(ctx)
 		if err != nil {
-			return err
+			return params, err
 		}
-		key = aws.ToString(out.Parameter.Value)
+		params.Model = lo.Ternary(params.Model != "", params.Model, model)
+		params.Prompt = lo.Ternary(params.Prompt != "", params.Prompt, prompt)
 	}
 
-	if evt.Model == "" || evt.Prompt == "" {
-		log.Println("Fetching model/prompt from Parameter Store")
-		out, err := ssmc.GetParametersByPath(ctx, &ssm.GetParametersByPathInput{
-			Path:           aws.String(os.Getenv("PROMPTS_PARAM")),
-			WithDecryption: aws.Bool(true),
-		})
-		if err != nil {
-			return err
-		}
-		pair := strings.Split(aws.ToString(out.Parameters[rand.Intn(len(out.Parameters))].Value), "|")
-		if evt.Model == "" {
-			evt.Model = pair[0]
-		}
-		if evt.Prompt == "" {
-			evt.Prompt = pair[1]
-		}
+	if params.Id == "" {
+		params.Id = time.Now().UTC().Format("20060102")
 	}
-	log.Print("Event: %s\n", evt)
 
-	body, err := json.Marshal(evt)
+	img, seed, err := h.Generator.Generate(ctx, params.toImageParams())
 	if err != nil {
-		return err
+		return params, err
 	}
+	params.Seed = seed
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.dezgo.com/text2image", bytes.NewBuffer(body))
+	html, err := h.Templator.Template(ctx, params.toPageParams())
 	if err != nil {
-		return err
+		return params, err
 	}
 
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("X-Dezgo-Key", key)
-
-	log.Println("Generating image via Dezgo")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
+	metadata := params.toMetadata()
+	uploads := []store.UploadParams{
+		{Name: params.Id + ".png", Data: img, ContentType: "image/png", Metadata: metadata},
+		{Name: "latest.png", Data: img, ContentType: "image/png", Metadata: metadata},
+		{Name: params.Id + ".html", Data: html, ContentType: "text/html", Metadata: metadata},
+		{Name: "latest.html", Data: html, ContentType: "text/html", Metadata: metadata},
 	}
-	defer resp.Body.Close()
-
-	seed := resp.Header.Get("x-input-seed")
-	log.Printf("Image seed: %s\n", seed)
-
-	now := time.Now().UTC().Format("20060102")
-	bucket := os.Getenv("BUCKET")
-
-	kitten := map[string]string{
-		"Image":  now + ".png",
-		"Prompt": evt.Prompt,
-		"Model":  evt.Model,
-		"Seed":   seed,
+	for _, u := range uploads {
+		if err := h.Uploader.Upload(ctx, u); err != nil {
+			return params, err
+		}
 	}
 
-	s3c := s3.NewFromConfig(cfg)
-	uploader := manager.NewUploader(s3c)
-
-	log.Printf("Uploading %s to %s\n", now+".png", bucket)
-	if _, err := uploader.Upload(ctx, &s3.PutObjectInput{
-		Bucket:       aws.String(bucket),
-		Key:          aws.String(now + ".png"),
-		ContentType:  aws.String("image/png"),
-		Body:         resp.Body,
-		Metadata:     kitten,
-		StorageClass: s3types.StorageClassIntelligentTiering,
-	}); err != nil {
-		return err
+	paths := lo.Map(uploads, func(u store.UploadParams, _ int) string { return "/" + u.Name })
+	if err := h.Invalidator.Invalidate(ctx, paths); err != nil {
+		return params, err
 	}
 
-	log.Printf("Copying %s to latest.png\n", now+".png")
-	if _, err := s3c.CopyObject(ctx, &s3.CopyObjectInput{
-		Bucket:      aws.String(bucket),
-		Key:         aws.String("latest.png"),
-		ContentType: aws.String("image/png"),
-		CopySource:  aws.String(fmt.Sprintf("%s/%s.png", bucket, now)),
-		Metadata:    kitten,
-	}); err != nil {
-		return err
-	}
-
-	var data bytes.Buffer
-	if err := tmpl.Execute(&data, kitten); err != nil {
-		return err
-	}
-
-	log.Printf("Uploading %s to %s\n", now+".html", bucket)
-	if _, err := uploader.Upload(ctx, &s3.PutObjectInput{
-		Bucket:       aws.String(bucket),
-		Key:          aws.String(now + ".html"),
-		ContentType:  aws.String("text/html"),
-		Body:         bytes.NewReader(data.Bytes()),
-		Metadata:     kitten,
-		StorageClass: s3types.StorageClassIntelligentTiering,
-	}); err != nil {
-		return err
-	}
-
-	log.Printf("Copying %s to latest.png\n", now+".html")
-	if _, err := s3c.CopyObject(ctx, &s3.CopyObjectInput{
-		Bucket:      aws.String(bucket),
-		Key:         aws.String("latest.html"),
-		ContentType: aws.String("text/html"),
-		CopySource:  aws.String(fmt.Sprintf("%s/%s.html", bucket, now)),
-		Metadata:    kitten,
-	}); err != nil {
-		return err
-	}
-
-	distribution := os.Getenv("DISTRIBUTION")
-	log.Printf("Invaliding created files in CloudFront distribution %s\n", distribution)
-	cf := cloudfront.NewFromConfig(cfg)
-	if _, err := cf.CreateInvalidation(ctx, &cloudfront.CreateInvalidationInput{
-		DistributionId: aws.String(distribution),
-		InvalidationBatch: &cftypes.InvalidationBatch{
-			CallerReference: aws.String(time.Now().UTC().Format("20060102150405")),
-			Paths: &cftypes.Paths{
-				Quantity: aws.Int32(4),
-				Items: []string{
-					"/latest.html",
-					"/latest.png",
-					fmt.Sprintf("/%s.png", now),
-					fmt.Sprintf("/%s.html", now),
-				},
-			},
-		},
-	}); err != nil {
-		return err
-	}
-
-	return nil
+	return params, nil
 }
 
 func main() {
-	if _, ok := os.LookupEnv("AWS_LAMBDA_RUNTIME_API"); ok {
-		lambda.Start(HandleRequest)
-	} else {
-		if err := HandleRequest(context.Background(), Event{
-			Prompt: os.Args[1],
-			Model:  os.Args[2],
-		}); err != nil {
+	ctx := logr.NewContext(context.Background(), stdr.New(nil))
+
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	fetcher := &param.ParameterStoreFetcher{
+		Client: ssm.NewFromConfig(cfg),
+	}
+
+	randomizer := &prompt.Randomizer{
+		Fetcher: fetcher,
+		Path:    os.Getenv("PROMPTS_PARAM"),
+	}
+
+	var generator image.Generator
+	{
+		key, err := fetcher.Fetch(ctx, os.Getenv("DEZGO_KEY_PARAM"))
+		if err != nil {
 			panic(err)
 		}
+
+		generator = &image.DezgoGenerator{
+			Client: http.DefaultClient,
+			Key:    key,
+		}
+	}
+
+	uploader := &store.S3Uploader{
+		Client: s3.NewFromConfig(cfg),
+		Bucket: os.Getenv("BUCKET"),
+	}
+
+	invalidator := &store.CloudFrontInvalidator{
+		Client:       cloudfront.NewFromConfig(cfg),
+		Distribution: os.Getenv("DISTRIBUTION"),
+	}
+
+	handler := &Handler{
+		Randomizer:  randomizer,
+		Generator:   generator,
+		Templator:   &page.Templator{},
+		Uploader:    uploader,
+		Invalidator: invalidator,
+	}
+
+	if _, ok := os.LookupEnv("AWS_LAMBDA_RUNTIME_API"); ok {
+		lambda.StartWithOptions(handler, lambda.WithContext(ctx))
+	} else {
+		var params Params
+		if len(os.Args) > 1 {
+			if err := json.Unmarshal([]byte(os.Args[1]), &params); err != nil {
+				panic(err)
+			}
+		}
+		params, err := handler.HandleRequest(ctx, params)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(params)
 	}
 }

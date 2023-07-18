@@ -28,6 +28,10 @@ variable "prompts" {
     prompt = string
   }))
   description = "Models and prompts"
+  validation {
+    condition = length(var.prompts) > 1
+    error_message = "List of models/prompts must not be empty"
+  }
 }
 
 resource "aws_ssm_parameter" "prompts" {
@@ -94,13 +98,7 @@ data "aws_iam_policy_document" "lambda" {
   }
 
   statement {
-    actions = [
-      "s3:AbortMultipartUpload",
-      "s3:GetObject",
-      "s3:ListBucketMultipartUploads",
-      "s3:ListMultipartUploadParts",
-      "s3:PutObject",
-    ]
+    actions = ["s3:PutObject"]
     resources = ["${aws_s3_bucket.kittenbot.arn}/*"]
   }
 

@@ -6,10 +6,12 @@ require (
 	github.com/aws/aws-lambda-go v1.41.0
 	github.com/aws/aws-sdk-go-v2 v1.18.1
 	github.com/aws/aws-sdk-go-v2/config v1.18.27
-	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.11.71
 	github.com/aws/aws-sdk-go-v2/service/cloudfront v1.26.8
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.36.0
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.36.7
+	github.com/go-logr/logr v1.2.2
+	github.com/go-logr/stdr v1.2.2
+	github.com/samber/lo v1.38.1
 )
 
 require (
@@ -29,4 +31,5 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.19.2 // indirect
 	github.com/aws/smithy-go v1.13.5 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
+	golang.org/x/exp v0.0.0-20220303212507-bbda1eaf7a17 // indirect
 )
