@@ -19,7 +19,7 @@ type S3Uploader struct {
 }
 
 func (u *S3Uploader) Upload(ctx context.Context, params UploadParams) error {
-	log := logr.FromContextOrDiscard(ctx).WithValues(
+	log := logr.FromContextOrDiscard(ctx).WithName("s3 uploader").WithValues(
 		"name", params.Name,
 		"content-type", params.ContentType,
 		"metadata", params.Metadata,
@@ -44,7 +44,7 @@ type CloudFrontInvalidator struct {
 }
 
 func (i *CloudFrontInvalidator) Invalidate(ctx context.Context, paths []string) error {
-	log := logr.FromContextOrDiscard(ctx).WithValues("paths", paths, "distribution", i.Distribution)
+	log := logr.FromContextOrDiscard(ctx).WithName("cloudfront invalidator").WithValues("paths", paths, "distribution", i.Distribution)
 	log.Info("invalidating paths in cloudfront")
 
 	_, err := i.Client.CreateInvalidation(ctx, &cloudfront.CreateInvalidationInput{

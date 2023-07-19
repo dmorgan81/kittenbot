@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -67,7 +68,7 @@ type Handler struct {
 
 func (h *Handler) HandleRequest(ctx context.Context, params Params) (Params, error) {
 	ctx = logr.NewContext(ctx, stdr.New(nil))
-	log := logr.FromContextOrDiscard(ctx).WithValues("params", params)
+	log := logr.FromContextOrDiscard(ctx).WithName("handler").WithValues("params", params)
 	log.Info("handling lambda invocation")
 
 	if params.Model == "" || params.Prompt == "" {
@@ -116,7 +117,7 @@ func (h *Handler) HandleRequest(ctx context.Context, params Params) (Params, err
 }
 
 func main() {
-	ctx := logr.NewContext(context.Background(), stdr.New(nil))
+	ctx := logr.NewContext(context.Background(), stdr.New(log.New(os.Stderr, "", 0)))
 
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {

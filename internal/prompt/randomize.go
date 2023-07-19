@@ -24,7 +24,7 @@ func (r *Randomizer) Randomize(ctx context.Context) (string, string, error) {
 		r.rnd = rand.New(rand.NewSource(time.Now().UTC().Unix()))
 	})
 
-	log := logr.FromContextOrDiscard(ctx)
+	log := logr.FromContextOrDiscard(ctx).WithName("randomizer")
 	log.Info("getting random model and prompt")
 
 	prompts, err := r.Fetcher.FetchAll(ctx, r.Path)

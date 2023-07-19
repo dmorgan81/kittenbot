@@ -30,7 +30,7 @@ func (g *Templator) Template(ctx context.Context, params Params) ([]byte, error)
 		g.tmpl = template.Must(template.New("latest").Parse(latestTmpl))
 	})
 
-	log := logr.FromContextOrDiscard(ctx)
+	log := logr.FromContextOrDiscard(ctx).WithName("templator")
 	log.Info("generating page")
 
 	var data bytes.Buffer

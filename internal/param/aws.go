@@ -15,7 +15,7 @@ type ParameterStoreFetcher struct {
 }
 
 func (f *ParameterStoreFetcher) Fetch(ctx context.Context, path string) (string, error) {
-	log := logr.FromContextOrDiscard(ctx).WithValues("path", path)
+	log := logr.FromContextOrDiscard(ctx).WithName("parameter store").WithValues("path", path)
 	log.Info("fetching single parameter")
 
 	out, err := f.Client.GetParameter(ctx, &ssm.GetParameterInput{
@@ -29,7 +29,7 @@ func (f *ParameterStoreFetcher) Fetch(ctx context.Context, path string) (string,
 }
 
 func (f *ParameterStoreFetcher) FetchAll(ctx context.Context, path string) ([]string, error) {
-	log := logr.FromContextOrDiscard(ctx).WithValues("path", path)
+	log := logr.FromContextOrDiscard(ctx).WithName("parameter store").WithValues("path", path)
 	log.Info("fetching all parameters")
 
 	out, err := f.Client.GetParametersByPath(ctx, &ssm.GetParametersByPathInput{
