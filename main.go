@@ -164,7 +164,7 @@ func main() {
 	}
 
 	if _, ok := os.LookupEnv("AWS_LAMBDA_RUNTIME_API"); ok {
-		lambda.StartWithOptions(handler, lambda.WithContext(ctx))
+		lambda.StartWithOptions(handler.HandleRequest, lambda.WithContext(ctx))
 	} else {
 		var params Params
 		if len(os.Args) > 1 {
