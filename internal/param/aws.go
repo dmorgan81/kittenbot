@@ -7,18 +7,23 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
 	"github.com/go-logr/logr"
+	"github.com/samber/do"
 	"github.com/samber/lo"
 )
 
 type ParameterStoreFetcher struct {
-	Client *ssm.Client
+	client *ssm.Client
+}
+
+func NewParameterStoreFetcher(i *do.Injector) (Fetcher, error) {
+	return &ParameterStoreFetcher{client: do.MustInvoke[*ssm.Client](i)}, nil
 }
 
 func (f *ParameterStoreFetcher) Fetch(ctx context.Context, path string) (string, error) {
 	log := logr.FromContextOrDiscard(ctx).WithName("parameter store").WithValues("path", path)
 	log.Info("fetching single parameter")
 
-	out, err := f.Client.GetParameter(ctx, &ssm.GetParameterInput{
+	out, err := f.client.GetParameter(ctx, &ssm.GetParameterInput{
 		Name:           aws.String(path),
 		WithDecryption: aws.Bool(true),
 	})
@@ -32,7 +37,7 @@ func (f *ParameterStoreFetcher) FetchAll(ctx context.Context, path string) ([]st
 	log := logr.FromContextOrDiscard(ctx).WithName("parameter store").WithValues("path", path)
 	log.Info("fetching all parameters")
 
-	out, err := f.Client.GetParametersByPath(ctx, &ssm.GetParametersByPathInput{
+	out, err := f.client.GetParametersByPath(ctx, &ssm.GetParametersByPathInput{
 		Path:           aws.String(path),
 		WithDecryption: aws.Bool(true),
 	})

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cloudfront"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -22,6 +23,7 @@ import (
 	"github.com/dmorgan81/kittenbot/internal/store"
 	"github.com/go-logr/logr"
 	"github.com/go-logr/stdr"
+	"github.com/samber/do"
 	"github.com/samber/lo"
 )
 
@@ -116,66 +118,82 @@ func (h *Handler) HandleRequest(ctx context.Context, params Params) (Params, err
 }
 
 func main() {
-	ctx := logr.NewContext(context.Background(), stdr.New(log.New(os.Stderr, "", 0)))
+	log := stdr.New(log.New(os.Stderr, "", 0))
+	ctx := logr.NewContext(context.Background(), log)
 
-	cfg, err := config.LoadDefaultConfig(ctx)
-	if err != nil {
-		panic(err)
-	}
+	injector := do.NewWithOpts(&do.InjectorOpts{
+		Logf: func(format string, args ...any) {
+			log.Info(fmt.Sprintf(format, args))
+		},
+	})
+	do.Provide[aws.Config](injector, func(i *do.Injector) (aws.Config, error) {
+		return config.LoadDefaultConfig(ctx)
+	})
+	do.Provide[*ssm.Client](injector, func(i *do.Injector) (*ssm.Client, error) {
+		return ssm.NewFromConfig(do.MustInvoke[aws.Config](i)), nil
+	})
+	do.Provide[*s3.Client](injector, func(i *do.Injector) (*s3.Client, error) {
+		return s3.NewFromConfig(do.MustInvoke[aws.Config](i)), nil
+	})
+	do.Provide[*cloudfront.Client](injector, func(i *do.Injector) (*cloudfront.Client, error) {
+		return cloudfront.NewFromConfig(do.MustInvoke[aws.Config](i)), nil
+	})
+	do.ProvideValue[*http.Client](injector, http.DefaultClient)
 
-	fetcher := &param.ParameterStoreFetcher{
-		Client: ssm.NewFromConfig(cfg),
-	}
+	do.Provide[param.Fetcher](injector, param.NewParameterStoreFetcher)
+	do.Provide[*prompt.Randomizer](injector, prompt.NewRandomizer)
+	do.Provide[image.Generator](injector, image.NewDezgoGenerator)
+	do.Provide[store.Uploader](injector, store.NewS3Uploader)
+	do.Provide[store.Invalidator](injector, store.NewCloudFrontInvalidator)
+	do.Provide[*page.Templator](injector, page.NewTemplator)
 
-	randomizer := &prompt.Randomizer{
-		Fetcher: fetcher,
-		Path:    os.Getenv("PROMPTS_PARAM"),
-	}
+	do.ProvideNamed[string](injector, "dezgo_key", func(i *do.Injector) (string, error) {
+		return do.MustInvoke[param.Fetcher](i).Fetch(ctx, os.Getenv("DEZGO_KEY_PARAM"))
+	})
+	do.ProvideNamed[[]string](injector, "prompts", func(i *do.Injector) ([]string, error) {
+		return do.MustInvoke[param.Fetcher](i).FetchAll(ctx, os.Getenv("PROMPTS_PARAM"))
+	})
+	do.ProvideNamedValue[string](injector, "bucket", os.Getenv("BUCKET"))
+	do.ProvideNamedValue[string](injector, "distribution", os.Getenv("DISTRIBUTION"))
 
-	var generator image.Generator
-	{
-		key, err := fetcher.Fetch(ctx, os.Getenv("DEZGO_KEY_PARAM"))
-		if err != nil {
-			panic(err)
-		}
-
-		generator = &image.DezgoGenerator{
-			Client: http.DefaultClient,
-			Key:    key,
-		}
-	}
-
-	uploader := &store.S3Uploader{
-		Client: s3.NewFromConfig(cfg),
-		Bucket: os.Getenv("BUCKET"),
-	}
-
-	invalidator := &store.CloudFrontInvalidator{
-		Client:       cloudfront.NewFromConfig(cfg),
-		Distribution: os.Getenv("DISTRIBUTION"),
-	}
-
-	handler := &Handler{
-		Randomizer:  randomizer,
-		Generator:   generator,
-		Templator:   &page.Templator{},
-		Uploader:    uploader,
-		Invalidator: invalidator,
-	}
+	do.Provide[*Handler](injector, func(i *do.Injector) (*Handler, error) {
+		return &Handler{
+			Randomizer:  do.MustInvoke[*prompt.Randomizer](i),
+			Generator:   do.MustInvoke[image.Generator](i),
+			Templator:   do.MustInvoke[*page.Templator](i),
+			Uploader:    do.MustInvoke[store.Uploader](i),
+			Invalidator: do.MustInvoke[store.Invalidator](i),
+		}, nil
+	})
 
 	if _, ok := os.LookupEnv("AWS_LAMBDA_RUNTIME_API"); ok {
-		lambda.StartWithOptions(handler.HandleRequest, lambda.WithContext(ctx))
+		handler := do.MustInvoke[*Handler](injector)
+		lambda.StartWithOptions(handler.HandleRequest, lambda.WithContext(ctx), lambda.WithEnableSIGTERM(func() {
+			_ = injector.Shutdown()
+		}))
 	} else {
+		do.OverrideValue[store.Uploader](injector, &store.FileUploader{})
+		do.OverrideValue[store.Invalidator](injector, &store.NoopInvalidator{})
+
 		var params Params
 		if len(os.Args) > 1 {
 			if err := json.Unmarshal([]byte(os.Args[1]), &params); err != nil {
 				panic(err)
 			}
 		}
+
+		handler := do.MustInvoke[*Handler](injector)
 		params, err := handler.HandleRequest(ctx, params)
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println(params)
+
+		if err := json.NewEncoder(os.Stdout).Encode(params); err != nil {
+			panic(err)
+		}
+
+		if err := injector.Shutdown(); err != nil {
+			panic(err)
+		}
 	}
 }

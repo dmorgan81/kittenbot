@@ -8,11 +8,18 @@ import (
 	"net/http"
 
 	"github.com/go-logr/logr"
+	"github.com/samber/do"
 )
 
 type DezgoGenerator struct {
-	Client *http.Client
-	Key    string
+	client *http.Client
+	key    string
+}
+
+func NewDezgoGenerator(i *do.Injector) (Generator, error) {
+	client := do.MustInvoke[*http.Client](i)
+	key := do.MustInvokeNamed[string](i, "dezgo_key")
+	return &DezgoGenerator{client, key}, nil
 }
 
 func (g *DezgoGenerator) Generate(ctx context.Context, params Params) ([]byte, string, error) {
@@ -30,9 +37,9 @@ func (g *DezgoGenerator) Generate(ctx context.Context, params Params) ([]byte, s
 	}
 
 	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("X-Dezgo-Key", g.Key)
+	req.Header.Add("X-Dezgo-Key", g.key)
 
-	resp, err := g.Client.Do(req)
+	resp, err := g.client.Do(req)
 	if err != nil {
 		return nil, "", err
 	}

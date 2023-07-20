@@ -11,6 +11,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.36.7
 	github.com/go-logr/logr v1.2.2
 	github.com/go-logr/stdr v1.2.2
+	github.com/samber/do v1.6.0
 	github.com/samber/lo v1.38.1
 )
 

@@ -5,9 +5,9 @@ import (
 	"context"
 	_ "embed"
 	"html/template"
-	"sync"
 
 	"github.com/go-logr/logr"
+	"github.com/samber/do"
 )
 
 //go:embed assets/latest.html
@@ -22,14 +22,14 @@ type Params struct {
 
 type Templator struct {
 	tmpl *template.Template
-	once sync.Once
+}
+
+func NewTemplator(i *do.Injector) (*Templator, error) {
+	tmpl := template.Must(template.New("latest").Parse(latestTmpl))
+	return &Templator{tmpl}, nil
 }
 
 func (g *Templator) Template(ctx context.Context, params Params) ([]byte, error) {
-	g.once.Do(func() {
-		g.tmpl = template.Must(template.New("latest").Parse(latestTmpl))
-	})
-
 	log := logr.FromContextOrDiscard(ctx).WithName("templator")
 	log.Info("generating page")
 
