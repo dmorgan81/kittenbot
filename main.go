@@ -67,7 +67,6 @@ type Handler struct {
 }
 
 func (h *Handler) HandleRequest(ctx context.Context, params Params) (Params, error) {
-	ctx = logr.NewContext(ctx, stdr.New(nil))
 	log := logr.FromContextOrDiscard(ctx).WithName("handler").WithValues("params", params)
 	log.Info("handling lambda invocation")
 
