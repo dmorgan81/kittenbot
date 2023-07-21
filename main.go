@@ -42,15 +42,12 @@ func (p Params) toImageParams() image.Params {
 	}
 }
 
-func (p Params) toPageParams(now time.Time) page.Params {
+func (p Params) toPageParams() page.Params {
 	return page.Params{
 		Image:  p.Date + ".png",
 		Model:  p.Model,
 		Prompt: p.Prompt,
 		Seed:   p.Seed,
-
-		Prev: now.AddDate(0, 0, -1).Format("20060102") + ".html",
-		Next: now.AddDate(0, 0, 1).Format("20060102") + ".html",
 	}
 }
 
@@ -84,9 +81,8 @@ func (h *Handler) HandleRequest(ctx context.Context, params Params) (Params, err
 		params.Prompt = lo.Ternary(params.Prompt != "", params.Prompt, prompt)
 	}
 
-	now := time.Now().UTC()
 	if params.Date == "" {
-		params.Date = now.Format("20060102")
+		params.Date = time.Now().UTC().Format("20060102")
 	}
 
 	img, seed, err := h.Generator.Generate(ctx, params.toImageParams())
@@ -95,7 +91,7 @@ func (h *Handler) HandleRequest(ctx context.Context, params Params) (Params, err
 	}
 	params.Seed = seed
 
-	html, err := h.Templator.Template(ctx, params.toPageParams(now))
+	html, err := h.Templator.Template(ctx, params.toPageParams())
 	if err != nil {
 		return params, err
 	}

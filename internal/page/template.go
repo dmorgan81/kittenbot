@@ -18,9 +18,6 @@ type Params struct {
 	Model  string
 	Prompt string
 	Seed   string
-
-	Prev string
-	Next string
 }
 
 type Templator struct {
