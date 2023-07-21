@@ -8,7 +8,12 @@
     <meta name="model" content="{{ .Model }}">
     <meta name="seed" content="{{ .Seed }}">
     <style>
-        img {
+        body {
+            font-family: 'Open Sans', sans-serif;
+            padding-left: 0.5em;
+        }
+
+        img, div {
             display: block;
             height: auto;
             margin-left: auto;
@@ -20,6 +25,12 @@
 
 <body>
     <img src="{{ .Image }}" alt="{{ .Prompt }}:{{ .Model }}:{{ .Seed }}">
+    <div style="text-align: center; max-width: 512px">
+        <a href="{{ .Prev }}" style="float: left">prev</a>
+        <a href="https://docs.kittenbot.io" target="_blank">docs</a>
+        <a href="https://github.com/dmorgan81/kittenbot" target="_blank">github</a>
+        <a href="{{ .Next }}" style="float: right">next</a>
+    </div>
 </body>
 
 </html>
