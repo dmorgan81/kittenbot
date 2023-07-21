@@ -2,12 +2,19 @@
 
 <head>
     <title>Kittenbot - Docs</title>
+    <style>
+        body {
+            font-family: 'Open Sans', sans-serif;
+            font-size: 1.5em;
+            padding-left: 0.5em;
+        }
+    </style>
 </head>
 
 <body>
-    <p>Every day <a href="https://kittenbot.io">kittenbot.io</a> is updated with a new, AI generated image. You can find that image <a href="https://kittenbot.io/latest.png">here.</a></p>
-    <p>Each day's image name has this date format: <code>yyyyMMdd</code>. For example, <a href="https://kittenbot.io/20230714.png">20230714.png</a>.</p>
-    <p>You may also access the image specific HTML the same way: <a href="https://kittenbot.io/20230714.png">20230714.html</a>.</p>
+    <p>Every day <a href="https://kittenbot.io">kittenbot.io</a> is updated with a new, AI generated image. You can find that image <a href="https://kittenbot.io/latest.png">here</a>.</p>
+    <p>Each day's image name has this date format: <code>yyyyMMdd</code>. For example, <a href="https://kittenbot.io/20230720.png">20230720.png</a>.</p>
+    <p>You may also access the image specific HTML the same way: <a href="https://kittenbot.io/20230720.html">20230720.html</a>.</p>
     <p>Each image has metadata about how the image was generated:</p>
     <ul>
         <li>Model - such as <code>foto_assisted_diffusion</code></li>
@@ -20,5 +27,14 @@
         <li>The response headers <code>x-amz-meta-model</code>, <code>x-amz-meta-prompt</code>, and <code>x-amz-meta-seed</code>.</li>
         <li>As meta tags in the HTML.</li>
     </ul>
+    <p style="margin-bottom: 0">You can easily access image metadata with curl:</p>
+    <pre style="margin-top: 0; margin-bottom: 0"><code>
+$ curl --head -s https://kittenbot.io/20230720.png | grep x-amz-meta
+x-amz-meta-date: 20230720
+x-amz-meta-prompt: cute calico kitten
+x-amz-meta-model: cyberrealistic_1_3
+x-amz-meta-seed: 4115191539
+    </code></pre>
+    <p style="margin-top: 0">The metadata key <code>x-amz-meta-date</code> will always match the file name without the extension.</p>
 </body>
 </html>
