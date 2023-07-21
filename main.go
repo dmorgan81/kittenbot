@@ -28,7 +28,7 @@ import (
 )
 
 type Params struct {
-	Id     string `json:"id,omitempty"`
+	Date   string `json:"date,omitempty"`
 	Model  string `json:"model,omitempty"`
 	Prompt string `json:"prompt,omitempty"`
 	Seed   string `json:"seed,omitempty"`
@@ -44,7 +44,7 @@ func (p Params) toImageParams() image.Params {
 
 func (p Params) toPageParams() page.Params {
 	return page.Params{
-		Image:  p.Id + ".png",
+		Image:  p.Date + ".png",
 		Model:  p.Model,
 		Prompt: p.Prompt,
 		Seed:   p.Seed,
@@ -53,7 +53,7 @@ func (p Params) toPageParams() page.Params {
 
 func (p Params) toMetadata() map[string]string {
 	return map[string]string{
-		"Id":     p.Id,
+		"Date":   p.Date,
 		"Model":  p.Model,
 		"Prompt": p.Prompt,
 		"Seed":   p.Seed,
@@ -81,8 +81,8 @@ func (h *Handler) HandleRequest(ctx context.Context, params Params) (Params, err
 		params.Prompt = lo.Ternary(params.Prompt != "", params.Prompt, prompt)
 	}
 
-	if params.Id == "" {
-		params.Id = time.Now().UTC().Format("20060102")
+	if params.Date == "" {
+		params.Date = time.Now().UTC().Format("20060102")
 	}
 
 	img, seed, err := h.Generator.Generate(ctx, params.toImageParams())
@@ -98,9 +98,9 @@ func (h *Handler) HandleRequest(ctx context.Context, params Params) (Params, err
 
 	metadata := params.toMetadata()
 	uploads := []store.UploadParams{
-		{Name: params.Id + ".png", Data: img, ContentType: "image/png", Metadata: metadata},
+		{Name: params.Date + ".png", Data: img, ContentType: "image/png", Metadata: metadata},
 		{Name: "latest.png", Data: img, ContentType: "image/png", Metadata: metadata},
-		{Name: params.Id + ".html", Data: html, ContentType: "text/html", Metadata: metadata},
+		{Name: params.Date + ".html", Data: html, ContentType: "text/html", Metadata: metadata},
 		{Name: "latest.html", Data: html, ContentType: "text/html", Metadata: metadata},
 	}
 	for _, u := range uploads {
