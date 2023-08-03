@@ -67,8 +67,10 @@ func (h *ImageHandler) Handle(ctx context.Context, input ImageInput) (ImageOutpu
 		input.Prompt = lo.Ternary(input.Prompt != "", input.Prompt, prompt)
 	}
 
+	latest := true
 	if input.Date == "" {
 		input.Date = time.Now().UTC().Format("20060102")
+		latest = false
 	}
 
 	img, seed, err := h.generator.Generate(ctx, input.toImageParams())
@@ -79,8 +81,20 @@ func (h *ImageHandler) Handle(ctx context.Context, input ImageInput) (ImageOutpu
 
 	metadata := input.toMetadata()
 	uploads := []store.UploadParams{
-		{Name: input.Date + ".png", Data: img, ContentType: "image/png", Metadata: metadata},
-		{Name: "latest.png", Data: img, ContentType: "image/png", Metadata: metadata},
+		{
+			Name:        input.Date + ".png",
+			Data:        img,
+			ContentType: "image/png",
+			Metadata:    metadata,
+		},
+	}
+	if latest {
+		uploads = append(uploads, store.UploadParams{
+			Name:        "latest.png",
+			Data:        img,
+			ContentType: "image/png",
+			Metadata:    metadata,
+		})
 	}
 	for _, u := range uploads {
 		if err := h.uploader.Upload(ctx, u); err != nil {
@@ -88,8 +102,10 @@ func (h *ImageHandler) Handle(ctx context.Context, input ImageInput) (ImageOutpu
 		}
 	}
 
-	paths := lo.Map(uploads, func(u store.UploadParams, _ int) string { return "/" + u.Name })
-	paths = append(paths, input.Date+".html", "latest.html")
+	paths := []string{input.Date + ".png", input.Date + ".html"}
+	if latest {
+		paths = append(paths, "latest.png", "latest.html")
+	}
 	if err := h.invalidator.Invalidate(ctx, paths); err != nil {
 		return ImageOutput{}, err
 	}

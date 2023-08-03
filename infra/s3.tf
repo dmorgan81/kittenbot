@@ -29,7 +29,7 @@ data "aws_iam_policy_document" "kittenbot_bucket" {
 
 resource "aws_s3_access_point" "kittenbot" {
   bucket = aws_s3_bucket.kittenbot.id
-  name = "kittenbot"
+  name   = "kittenbot"
 }
 
 resource "aws_s3control_object_lambda_access_point" "kittenbot" {
@@ -50,7 +50,7 @@ resource "aws_s3control_object_lambda_access_point" "kittenbot" {
 }
 
 resource "aws_s3control_object_lambda_access_point_policy" "kittenbot" {
-  name = aws_s3control_object_lambda_access_point.kittenbot.name
+  name   = aws_s3control_object_lambda_access_point.kittenbot.name
   policy = data.aws_iam_policy_document.kittenbot_ap.json
 }
 

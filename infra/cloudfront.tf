@@ -49,7 +49,7 @@ resource "aws_cloudfront_response_headers_policy" "kittenbot_png" {
 }
 
 variable "ap_alias" {
-  type = string
+  type        = string
   description = "Alias of the Object Lambda Access point. Required until https://github.com/hashicorp/terraform-provider-aws/issues/30038 is fixed."
 }
 
@@ -63,9 +63,9 @@ resource "aws_cloudfront_distribution" "kittenbot" {
   }
 
   origin {
-    domain_name = format("%s.s3.%s.amazonaws.com", var.ap_alias, aws_s3_bucket.kittenbot.region)
+    domain_name              = format("%s.s3.%s.amazonaws.com", var.ap_alias, aws_s3_bucket.kittenbot.region)
     origin_access_control_id = aws_cloudfront_origin_access_control.kittenbot.id
-    origin_id = aws_s3control_object_lambda_access_point.kittenbot.id
+    origin_id                = aws_s3control_object_lambda_access_point.kittenbot.id
   }
 
   default_root_object = "latest.html"

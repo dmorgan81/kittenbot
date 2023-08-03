@@ -29,7 +29,7 @@ variable "prompts" {
   }))
   description = "Models and prompts"
   validation {
-    condition = length(var.prompts) > 1
+    condition     = length(var.prompts) > 1
     error_message = "List of models/prompts must not be empty"
   }
 }
@@ -103,7 +103,7 @@ data "aws_iam_policy_document" "lambda_image" {
   }
 
   statement {
-    actions = ["s3:PutObject"]
+    actions   = ["s3:PutObject"]
     resources = ["${aws_s3_bucket.kittenbot.arn}/*"]
   }
 
@@ -171,7 +171,7 @@ resource "aws_iam_policy" "lambda_html" {
 
 data "aws_iam_policy_document" "lambda_html" {
   statement {
-    actions = ["s3:GetObject"]
+    actions   = ["s3:GetObject"]
     resources = ["${aws_s3_bucket.kittenbot.arn}/*"]
   }
 }
@@ -187,7 +187,7 @@ resource "aws_iam_role_policy_attachment" "lambda_html_logs" {
 }
 
 resource "aws_lambda_permission" "lambda_html" {
-  action = "lambda:InvokeFunction"
+  action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.html.function_name
-  principal = "cloudfront.amazonaws.com"
+  principal     = "cloudfront.amazonaws.com"
 }
