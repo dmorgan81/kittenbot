@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/dmorgan81/kittenbot/internal/image"
-	"github.com/dmorgan81/kittenbot/internal/page"
 	"github.com/dmorgan81/kittenbot/internal/prompt"
 	"github.com/dmorgan81/kittenbot/internal/store"
 	"github.com/go-logr/logr"
@@ -28,21 +27,12 @@ func (i ImageInput) toImageParams() image.Params {
 	}
 }
 
-func (i ImageInput) toPageParams() page.Params {
-	return page.Params{
-		Image:  i.Date + ".png",
-		Model:  i.Model,
-		Prompt: i.Prompt,
-		Seed:   i.Seed,
-	}
-}
-
 func (i ImageInput) toMetadata() map[string]string {
 	return map[string]string{
-		"Date":   i.Date,
-		"Model":  i.Model,
-		"Prompt": i.Prompt,
-		"Seed":   i.Seed,
+		"date":   i.Date,
+		"model":  i.Model,
+		"prompt": i.Prompt,
+		"seed":   i.Seed,
 	}
 }
 
@@ -51,7 +41,6 @@ type ImageOutput ImageInput
 type ImageHandler struct {
 	randomizer  *prompt.Randomizer
 	generator   image.Generator
-	templator   *page.Templator
 	uploader    store.Uploader
 	invalidator store.Invalidator
 }
@@ -60,14 +49,13 @@ func NewImageHandler(i *do.Injector) (*ImageHandler, error) {
 	return &ImageHandler{
 		randomizer:  do.MustInvoke[*prompt.Randomizer](i),
 		generator:   do.MustInvoke[image.Generator](i),
-		templator:   do.MustInvoke[*page.Templator](i),
 		uploader:    do.MustInvoke[store.Uploader](i),
 		invalidator: do.MustInvoke[store.Invalidator](i),
 	}, nil
 }
 
 func (h *ImageHandler) Handle(ctx context.Context, input ImageInput) (ImageOutput, error) {
-	log := logr.FromContextOrDiscard(ctx).WithName("handler").WithValues("input", input)
+	log := logr.FromContextOrDiscard(ctx).WithName("ImageHandler").WithValues("input", input)
 	log.Info("handling lambda invocation")
 
 	if input.Model == "" || input.Prompt == "" {
@@ -89,17 +77,10 @@ func (h *ImageHandler) Handle(ctx context.Context, input ImageInput) (ImageOutpu
 	}
 	input.Seed = seed
 
-	html, err := h.templator.Template(ctx, input.toPageParams())
-	if err != nil {
-		return ImageOutput{}, err
-	}
-
 	metadata := input.toMetadata()
 	uploads := []store.UploadParams{
 		{Name: input.Date + ".png", Data: img, ContentType: "image/png", Metadata: metadata},
 		{Name: "latest.png", Data: img, ContentType: "image/png", Metadata: metadata},
-		{Name: input.Date + ".html", Data: html, ContentType: "text/html", Metadata: metadata},
-		{Name: "latest.html", Data: html, ContentType: "text/html", Metadata: metadata},
 	}
 	for _, u := range uploads {
 		if err := h.uploader.Upload(ctx, u); err != nil {
@@ -108,6 +89,7 @@ func (h *ImageHandler) Handle(ctx context.Context, input ImageInput) (ImageOutpu
 	}
 
 	paths := lo.Map(uploads, func(u store.UploadParams, _ int) string { return "/" + u.Name })
+	paths = append(paths, input.Date+".html", "latest.html")
 	if err := h.invalidator.Invalidate(ctx, paths); err != nil {
 		return ImageOutput{}, err
 	}

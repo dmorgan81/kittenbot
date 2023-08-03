@@ -1,5 +1,5 @@
 resource "aws_cloudfront_origin_access_control" "kittenbot" {
-  name                              = aws_s3_bucket.kittenbot.bucket_regional_domain_name
+  name                              = "kittenbot"
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
   signing_protocol                  = "sigv4"
@@ -48,6 +48,11 @@ resource "aws_cloudfront_response_headers_policy" "kittenbot_png" {
   }
 }
 
+variable "ap_alias" {
+  type = string
+  description = "Alias of the Object Lambda Access point. Required until https://github.com/hashicorp/terraform-provider-aws/issues/30038 is fixed."
+}
+
 resource "aws_cloudfront_distribution" "kittenbot" {
   enabled = true
 
@@ -55,6 +60,12 @@ resource "aws_cloudfront_distribution" "kittenbot" {
     domain_name              = aws_s3_bucket.kittenbot.bucket_regional_domain_name
     origin_access_control_id = aws_cloudfront_origin_access_control.kittenbot.id
     origin_id                = aws_s3_bucket.kittenbot.id
+  }
+
+  origin {
+    domain_name = format("%s.s3.%s.amazonaws.com", var.ap_alias, aws_s3_bucket.kittenbot.region)
+    origin_access_control_id = aws_cloudfront_origin_access_control.kittenbot.id
+    origin_id = aws_s3control_object_lambda_access_point.kittenbot.id
   }
 
   default_root_object = "latest.html"
@@ -72,6 +83,16 @@ resource "aws_cloudfront_distribution" "kittenbot" {
     allowed_methods            = ["GET", "HEAD"]
     cached_methods             = ["GET", "HEAD"]
     compress                   = true
+    response_headers_policy_id = data.aws_cloudfront_response_headers_policy.security_headers.id
+  }
+
+  ordered_cache_behavior {
+    path_pattern               = "*.html"
+    cache_policy_id            = data.aws_cloudfront_cache_policy.caching_optimized.id
+    target_origin_id           = aws_s3control_object_lambda_access_point.kittenbot.id
+    viewer_protocol_policy     = "redirect-to-https"
+    allowed_methods            = ["GET", "HEAD"]
+    cached_methods             = ["GET", "HEAD"]
     response_headers_policy_id = data.aws_cloudfront_response_headers_policy.security_headers.id
   }
 

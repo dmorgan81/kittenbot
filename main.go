@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	_ "embed"
+	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/dmorgan81/kittenbot/internal/handle"
@@ -19,8 +21,19 @@ func main() {
 	ctx := logr.NewContext(context.Background(), log)
 	injector := inject.Setup(ctx)
 
-	handler := do.MustInvoke[*handle.ImageHandler](injector)
-	lambda.StartWithOptions(handler.Handle, lambda.WithContext(ctx), lambda.WithEnableSIGTERM(func() {
+	path := filepath.Base(os.Args[0])
+	var handler any
+	switch path {
+	case "kittenbot-image":
+		handler = do.MustInvoke[*handle.ImageHandler](injector).Handle
+	case "kittenbot-html":
+		handler = do.MustInvoke[*handle.HtmlHandler](injector).Handle
+	default:
+		fmt.Printf("no such handler: %s\n", path)
+		os.Exit(1)
+	}
+
+	lambda.StartWithOptions(handler, lambda.WithContext(ctx), lambda.WithEnableSIGTERM(func() {
 		_ = injector.Shutdown()
 	}))
 }

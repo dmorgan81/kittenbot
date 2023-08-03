@@ -20,14 +20,17 @@
             margin-right: auto;
             max-width: 100%;
         }
+
+        a {
+            text-decoration: none;
+        }
     </style>
 </head>
 
 <body>
     <img src="{{ .Image }}" alt="{{ .Prompt }}:{{ .Model }}:{{ .Seed }}">
     <div style="text-align: center">
-        <a href="https://docs.kittenbot.io" target="_blank">docs</a>
-        <a href="https://github.com/dmorgan81/kittenbot" target="_blank">github</a>
+        <a href="https://docs.kittenbot.io" target="_blank">docs</a> | <a href="https://github.com/dmorgan81/kittenbot" target="_blank">github</a>
     </div>
 </body>
 

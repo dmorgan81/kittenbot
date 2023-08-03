@@ -59,6 +59,7 @@ func Setup(ctx context.Context) *do.Injector {
 	do.ProvideNamedValue[string](injector, "bucket", os.Getenv("BUCKET"))
 	do.ProvideNamedValue[string](injector, "distribution", os.Getenv("DISTRIBUTION"))
 
+	do.Provide[*handle.HtmlHandler](injector, handle.NewHtmlHandler)
 	do.Provide[*handle.ImageHandler](injector, handle.NewImageHandler)
 
 	return injector

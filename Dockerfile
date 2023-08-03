@@ -19,6 +19,5 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build --ldflags '-extldflags "-stat
 
 FROM public.ecr.aws/lambda/go:1
 
-COPY --from=build-stage /kittenbot ${LAMBDA_TASK_ROOT}
-
-CMD ["kittenbot"]
+COPY --from=build-stage /kittenbot ${LAMBDA_TASK_ROOT}/kittenbot-html
+COPY --from=build-stage /kittenbot ${LAMBDA_TASK_ROOT}/kittenbot-image

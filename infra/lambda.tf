@@ -42,12 +42,17 @@ resource "aws_ssm_parameter" "prompts" {
   insecure_value = each.value
 }
 
-resource "aws_lambda_function" "kittenbot" {
-  function_name = "kittenbot"
-  role          = aws_iam_role.lambda.arn
+resource "aws_lambda_function" "image" {
+  function_name = "kittenbot-image"
+  role          = aws_iam_role.lambda_image.arn
   image_uri     = "${aws_ecr_repository.kittenbot.repository_url}:${var.image_tag}"
   package_type  = "Image"
   timeout       = 30
+
+  image_config {
+    command = ["kittenbot-image"]
+  }
+
   environment {
     variables = {
       "DEZGO_KEY_PARAM" : aws_ssm_parameter.dezgo_key.name
@@ -57,21 +62,21 @@ resource "aws_lambda_function" "kittenbot" {
     }
   }
 
-  depends_on = [aws_cloudwatch_log_group.lambda]
+  depends_on = [aws_cloudwatch_log_group.lambda_image]
 }
 
-resource "aws_cloudwatch_log_group" "lambda" {
-  name              = "/aws/lambda/kittenbot"
+resource "aws_cloudwatch_log_group" "lambda_image" {
+  name              = "/aws/lambda/kittenbot-image"
   retention_in_days = 7
   skip_destroy      = true
 }
 
-resource "aws_iam_role" "lambda" {
-  name_prefix        = "kittenbot-lambda-"
-  assume_role_policy = data.aws_iam_policy_document.lambda_sts.json
+resource "aws_iam_role" "lambda_image" {
+  name_prefix        = "kittenbot-image-lambda-"
+  assume_role_policy = data.aws_iam_policy_document.lambda_image_sts.json
 }
 
-data "aws_iam_policy_document" "lambda_sts" {
+data "aws_iam_policy_document" "lambda_image_sts" {
   statement {
     actions = ["sts:AssumeRole"]
     principals {
@@ -81,12 +86,12 @@ data "aws_iam_policy_document" "lambda_sts" {
   }
 }
 
-resource "aws_iam_policy" "lambda" {
-  name_prefix = "kittenbot-lambda-"
-  policy      = data.aws_iam_policy_document.lambda.json
+resource "aws_iam_policy" "lambda_image" {
+  name_prefix = "kittenbot-image-lambda-"
+  policy      = data.aws_iam_policy_document.lambda_image.json
 }
 
-data "aws_iam_policy_document" "lambda" {
+data "aws_iam_policy_document" "lambda_image" {
   statement {
     actions   = ["ssm:GetParameter"]
     resources = [aws_ssm_parameter.dezgo_key.arn]
@@ -108,12 +113,81 @@ data "aws_iam_policy_document" "lambda" {
   }
 }
 
-resource "aws_iam_role_policy_attachment" "lambda" {
-  role       = aws_iam_role.lambda.name
-  policy_arn = aws_iam_policy.lambda.arn
+resource "aws_iam_role_policy_attachment" "lambda_image" {
+  role       = aws_iam_role.lambda_image.name
+  policy_arn = aws_iam_policy.lambda_image.arn
 }
 
-resource "aws_iam_role_policy_attachment" "lambda_logs" {
-  role       = aws_iam_role.lambda.name
+resource "aws_iam_role_policy_attachment" "lambda_image_logs" {
+  role       = aws_iam_role.lambda_image.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_lambda_function" "html" {
+  function_name = "kittenbot-html"
+  role          = aws_iam_role.lambda_html.arn
+  image_uri     = "${aws_ecr_repository.kittenbot.repository_url}:${var.image_tag}"
+  package_type  = "Image"
+  timeout       = 30
+
+  image_config {
+    command = ["kittenbot-html"]
+  }
+
+  environment {
+    variables = {
+      "BUCKET" : aws_s3_bucket.kittenbot.id
+    }
+  }
+
+  depends_on = [aws_cloudwatch_log_group.lambda_html]
+}
+
+resource "aws_cloudwatch_log_group" "lambda_html" {
+  name              = "/aws/lambda/kittenbot-html"
+  retention_in_days = 7
+  skip_destroy      = true
+}
+
+resource "aws_iam_role" "lambda_html" {
+  name_prefix        = "kittenbot-html-lambda-"
+  assume_role_policy = data.aws_iam_policy_document.lambda_html_sts.json
+}
+
+data "aws_iam_policy_document" "lambda_html_sts" {
+  statement {
+    actions = ["sts:AssumeRole"]
+    principals {
+      type        = "Service"
+      identifiers = ["lambda.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_policy" "lambda_html" {
+  name_prefix = "kittenbot-html-lambda-"
+  policy      = data.aws_iam_policy_document.lambda_html.json
+}
+
+data "aws_iam_policy_document" "lambda_html" {
+  statement {
+    actions = ["s3:GetObject"]
+    resources = ["${aws_s3_bucket.kittenbot.arn}/*"]
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_html" {
+  role       = aws_iam_role.lambda_html.name
+  policy_arn = aws_iam_policy.lambda_html.arn
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_html_logs" {
+  role       = aws_iam_role.lambda_html.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonS3ObjectLambdaExecutionRolePolicy"
+}
+
+resource "aws_lambda_permission" "lambda_html" {
+  action = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.html.function_name
+  principal = "cloudfront.amazonaws.com"
 }
