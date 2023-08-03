@@ -26,5 +26,9 @@ prompts = [
   {
     model  = "cyberrealistic_1_3"
     prompt = "cute kitten playing with a ball of yarn"
+  },
+  {
+    model  = "icbinp"
+    prompt = "cute kitten under a blanket"
   }
 ]
