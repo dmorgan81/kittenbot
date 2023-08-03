@@ -102,9 +102,9 @@ func (h *ImageHandler) Handle(ctx context.Context, input ImageInput) (ImageOutpu
 		}
 	}
 
-	paths := []string{input.Date + ".png", input.Date + ".html"}
+	paths := []string{"/" + input.Date + ".png", "/" + input.Date + ".html"}
 	if latest {
-		paths = append(paths, "latest.png", "latest.html")
+		paths = append(paths, "/latest.png", "/latest.html")
 	}
 	if err := h.invalidator.Invalidate(ctx, paths); err != nil {
 		return ImageOutput{}, err
