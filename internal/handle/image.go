@@ -67,10 +67,10 @@ func (h *ImageHandler) Handle(ctx context.Context, input ImageInput) (ImageOutpu
 		input.Prompt = lo.Ternary(input.Prompt != "", input.Prompt, prompt)
 	}
 
-	latest := true
+	latest := false
 	if input.Date == "" {
 		input.Date = time.Now().UTC().Format("20060102")
-		latest = false
+		latest = true
 	}
 
 	img, seed, err := h.generator.Generate(ctx, input.toImageParams())
