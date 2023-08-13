@@ -4,6 +4,10 @@ variable "image_tag" {
   default     = "latest"
 }
 
+locals {
+  image_uri = "${aws_ecr_repository.kittenbot.repository_url}@${data.aws_ecr_image.kittenbot.image_digest}"
+}
+
 variable "dezgo_key" {
   type        = string
   description = "Dezgo.com API key"
@@ -45,7 +49,7 @@ resource "aws_ssm_parameter" "prompts" {
 resource "aws_lambda_function" "image" {
   function_name = "kittenbot-image"
   role          = aws_iam_role.lambda_image.arn
-  image_uri     = "${aws_ecr_repository.kittenbot.repository_url}:${var.image_tag}"
+  image_uri     = local.image_uri
   package_type  = "Image"
   timeout       = 30
 
@@ -126,7 +130,7 @@ resource "aws_iam_role_policy_attachment" "lambda_image_logs" {
 resource "aws_lambda_function" "html" {
   function_name = "kittenbot-html"
   role          = aws_iam_role.lambda_html.arn
-  image_uri     = "${aws_ecr_repository.kittenbot.repository_url}:${var.image_tag}"
+  image_uri     = local.image_uri
   package_type  = "Image"
   timeout       = 30
 

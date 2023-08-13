@@ -40,3 +40,9 @@ resource "aws_ecr_lifecycle_policy" "kittenbot" {
 }
 EOF
 }
+
+data "aws_ecr_image" "kittenbot" {
+  registry_id = aws_ecr_repository.kittenbot.registry_id
+  repository_name = aws_ecr_repository.kittenbot.name
+  image_tag = var.image_tag
+}
