@@ -13,16 +13,16 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/dmorgan81/kittenbot/internal/handle"
 	"github.com/dmorgan81/kittenbot/internal/image"
+	"github.com/dmorgan81/kittenbot/internal/log"
 	"github.com/dmorgan81/kittenbot/internal/page"
 	"github.com/dmorgan81/kittenbot/internal/param"
 	"github.com/dmorgan81/kittenbot/internal/prompt"
 	"github.com/dmorgan81/kittenbot/internal/store"
-	"github.com/go-logr/logr"
 	"github.com/samber/do"
 )
 
 func Setup(ctx context.Context) *do.Injector {
-	log := logr.FromContextOrDiscard(ctx)
+	log := log.FromContextOrDiscard(ctx)
 
 	injector := do.NewWithOpts(&do.InjectorOpts{
 		Logf: func(format string, args ...any) {

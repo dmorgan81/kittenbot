@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/dmorgan81/kittenbot/internal/image"
+	"github.com/dmorgan81/kittenbot/internal/log"
 	"github.com/dmorgan81/kittenbot/internal/prompt"
 	"github.com/dmorgan81/kittenbot/internal/store"
-	"github.com/go-logr/logr"
 	"github.com/samber/do"
 	"github.com/samber/lo"
 )
@@ -55,7 +55,7 @@ func NewImageHandler(i *do.Injector) (*ImageHandler, error) {
 }
 
 func (h *ImageHandler) Handle(ctx context.Context, input ImageInput) (ImageOutput, error) {
-	log := logr.FromContextOrDiscard(ctx).WithName("ImageHandler").WithValues("input", input)
+	log := log.FromContextOrDiscard(ctx).WithGroup("ImageHandler").With("input", input)
 	log.Info("handling lambda invocation")
 
 	if input.Model == "" || input.Prompt == "" {

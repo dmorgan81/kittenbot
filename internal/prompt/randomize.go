@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-logr/logr"
+	"github.com/dmorgan81/kittenbot/internal/log"
 	"github.com/samber/do"
 )
 
@@ -22,7 +22,7 @@ func NewRandomizer(i *do.Injector) (*Randomizer, error) {
 }
 
 func (r *Randomizer) Randomize(ctx context.Context) (string, string, error) {
-	log := logr.FromContextOrDiscard(ctx).WithName("randomizer")
+	log := log.FromContextOrDiscard(ctx).WithGroup("randomizer")
 	log.Info("getting random model and prompt")
 	idx := r.rnd.Intn(len(r.prompts))
 	pair := strings.Split(r.prompts[idx], "|")

@@ -4,21 +4,18 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/dmorgan81/kittenbot/internal/handle"
 	"github.com/dmorgan81/kittenbot/internal/inject"
-	"github.com/go-logr/logr"
-	"github.com/go-logr/stdr"
+	"github.com/dmorgan81/kittenbot/internal/log"
 	"github.com/samber/do"
 )
 
 func main() {
-	log := stdr.New(log.New(os.Stderr, "", 0))
-	ctx := logr.NewContext(context.Background(), log)
+	ctx := log.NewContext(context.Background(), log.New(os.Stderr))
 	injector := inject.Setup(ctx)
 
 	path := filepath.Base(os.Args[0])

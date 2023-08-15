@@ -7,8 +7,8 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/dmorgan81/kittenbot/internal/log"
 	"github.com/dmorgan81/kittenbot/internal/page"
-	"github.com/go-logr/logr"
 	"github.com/samber/do"
 )
 
@@ -40,7 +40,7 @@ func NewHtmlHandler(i *do.Injector) (*HtmlHandler, error) {
 }
 
 func (h *HtmlHandler) Handle(ctx context.Context, request HtmlRequest) error {
-	log := logr.FromContextOrDiscard(ctx).WithName("HtmlHandler").WithValues("request", request)
+	log := log.FromContextOrDiscard(ctx).WithGroup("HtmlHandler").With("request", request)
 	matches := urlRegexp.FindStringSubmatch(request.GetContext.Url)
 	key := matches[urlRegexp.SubexpIndex("key")]
 	log.Info("handling lambda request", "key", key)

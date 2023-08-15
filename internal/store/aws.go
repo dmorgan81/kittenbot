@@ -10,7 +10,7 @@ import (
 	cftypes "github.com/aws/aws-sdk-go-v2/service/cloudfront/types"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"github.com/go-logr/logr"
+	"github.com/dmorgan81/kittenbot/internal/log"
 	"github.com/samber/do"
 )
 
@@ -26,7 +26,7 @@ func NewS3Uploader(i *do.Injector) (Uploader, error) {
 }
 
 func (u *S3Uploader) Upload(ctx context.Context, params UploadParams) error {
-	log := logr.FromContextOrDiscard(ctx).WithName("s3 uploader").WithValues(
+	log := log.FromContextOrDiscard(ctx).WithGroup("s3 uploader").With(
 		"name", params.Name,
 		"content-type", params.ContentType,
 		"metadata", params.Metadata,
@@ -57,7 +57,7 @@ func NewCloudFrontInvalidator(i *do.Injector) (Invalidator, error) {
 }
 
 func (i *CloudFrontInvalidator) Invalidate(ctx context.Context, paths []string) error {
-	log := logr.FromContextOrDiscard(ctx).WithName("cloudfront invalidator").WithValues(
+	log := log.FromContextOrDiscard(ctx).WithGroup("cloudfront invalidator").With(
 		"paths", paths,
 		"distribution", i.distribution,
 	)

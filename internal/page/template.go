@@ -6,7 +6,7 @@ import (
 	_ "embed"
 	"html/template"
 
-	"github.com/go-logr/logr"
+	"github.com/dmorgan81/kittenbot/internal/log"
 	"github.com/samber/do"
 )
 
@@ -30,7 +30,7 @@ func NewTemplator(i *do.Injector) (*Templator, error) {
 }
 
 func (g *Templator) Template(ctx context.Context, params Params) ([]byte, error) {
-	log := logr.FromContextOrDiscard(ctx).WithName("templator")
+	log := log.FromContextOrDiscard(ctx).WithGroup("templator").With("params", params)
 	log.Info("generating page")
 
 	var data bytes.Buffer

@@ -7,7 +7,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/go-logr/logr"
+	"github.com/dmorgan81/kittenbot/internal/log"
 	"github.com/samber/do"
 )
 
@@ -23,7 +23,7 @@ func NewDezgoGenerator(i *do.Injector) (Generator, error) {
 }
 
 func (g *DezgoGenerator) Generate(ctx context.Context, params Params) ([]byte, string, error) {
-	log := logr.FromContextOrDiscard(ctx).WithName("dezgo").WithValues("params", params)
+	log := log.FromContextOrDiscard(ctx).WithGroup("dezgo").With("params", params)
 	log.Info("generating image via api.dezgo.com")
 
 	body, err := json.Marshal(params)

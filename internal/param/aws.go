@@ -6,7 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
-	"github.com/go-logr/logr"
+	"github.com/dmorgan81/kittenbot/internal/log"
 	"github.com/samber/do"
 	"github.com/samber/lo"
 )
@@ -20,7 +20,7 @@ func NewParameterStoreFetcher(i *do.Injector) (Fetcher, error) {
 }
 
 func (f *ParameterStoreFetcher) Fetch(ctx context.Context, path string) (string, error) {
-	log := logr.FromContextOrDiscard(ctx).WithName("parameter store").WithValues("path", path)
+	log := log.FromContextOrDiscard(ctx).WithGroup("parameter store").With("path", path)
 	log.Info("fetching single parameter")
 
 	out, err := f.client.GetParameter(ctx, &ssm.GetParameterInput{
@@ -34,7 +34,7 @@ func (f *ParameterStoreFetcher) Fetch(ctx context.Context, path string) (string,
 }
 
 func (f *ParameterStoreFetcher) FetchAll(ctx context.Context, path string) ([]string, error) {
-	log := logr.FromContextOrDiscard(ctx).WithName("parameter store").WithValues("path", path)
+	log := log.FromContextOrDiscard(ctx).WithGroup("parameter store").With("path", path)
 	log.Info("fetching all parameters")
 
 	out, err := f.client.GetParametersByPath(ctx, &ssm.GetParametersByPathInput{
