@@ -36,13 +36,20 @@
         a {
             text-decoration: none;
         }
+        a:not(:last-child):after {
+            content: " | ";
+            cursor: default;
+            color: black;
+        }
     </style>
 </head>
 
 <body>
     <img src="{{ .Image }}" alt="{{ .Prompt }}:{{ .Model }}:{{ .Seed }}">
     <div style="text-align: center">
-        <a href="https://docs.kittenbot.io" target="_blank">docs</a> | <a href="https://github.com/dmorgan81/kittenbot" target="_blank">github</a>
+        <a href="https://docs.kittenbot.io" target="_blank">docs</a>
+        <a href="https://github.com/dmorgan81/kittenbot" target="_blank">github</a>
+        <a href="https://secure.aspca.org/donate/donate" target="_blank">donate</a>
     </div>
 </body>
 
