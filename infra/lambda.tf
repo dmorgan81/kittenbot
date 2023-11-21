@@ -103,7 +103,10 @@ data "aws_iam_policy_document" "lambda" {
   }
 
   statement {
-    actions   = ["s3:PutObject"]
+    actions   = [
+      "s3:ListBucket",
+      "s3:PutObject"
+    ]
     resources = ["${aws_s3_bucket.kittenbot.arn}/*"]
   }
 
