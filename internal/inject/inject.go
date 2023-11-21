@@ -17,6 +17,7 @@ import (
 	"github.com/dmorgan81/kittenbot/internal/log"
 	"github.com/dmorgan81/kittenbot/internal/page"
 	"github.com/dmorgan81/kittenbot/internal/param"
+	"github.com/dmorgan81/kittenbot/internal/post"
 	"github.com/dmorgan81/kittenbot/internal/prompt"
 	"github.com/dmorgan81/kittenbot/internal/store"
 	"github.com/samber/do"
@@ -51,6 +52,7 @@ func Setup(ctx context.Context) *do.Injector {
 	do.Provide[store.Invalidator](injector, store.NewCloudFrontInvalidator)
 	do.Provide[*page.Templator](injector, page.NewTemplator)
 	do.Provide[*feed.Generator](injector, feed.NewS3Generator)
+	do.Provide[post.Poster](injector, post.NewRedditPoster)
 
 	do.ProvideNamed[string](injector, "dezgo_key", func(i *do.Injector) (string, error) {
 		return do.MustInvoke[param.Fetcher](i).Fetch(ctx, os.Getenv("DEZGO_KEY_PARAM"))
