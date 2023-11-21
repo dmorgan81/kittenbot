@@ -8,7 +8,7 @@ resource "aws_scheduler_schedule" "kittenbot" {
   }
 
   target {
-    arn      = aws_lambda_function.image.arn
+    arn      = aws_lambda_function.kittenbot.arn
     role_arn = aws_iam_role.eventbridge.arn
     retry_policy {
       maximum_event_age_in_seconds = 300
@@ -41,7 +41,7 @@ resource "aws_iam_policy" "eventbridge" {
 data "aws_iam_policy_document" "eventbridge" {
   statement {
     actions   = ["lambda:InvokeFunction"]
-    resources = [aws_lambda_function.image.arn]
+    resources = [aws_lambda_function.kittenbot.arn]
   }
 }
 

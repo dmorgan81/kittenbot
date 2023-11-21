@@ -11,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudfront"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
-	"github.com/dmorgan81/kittenbot/internal/handle"
+	"github.com/dmorgan81/kittenbot/internal/handler"
 	"github.com/dmorgan81/kittenbot/internal/image"
 	"github.com/dmorgan81/kittenbot/internal/log"
 	"github.com/dmorgan81/kittenbot/internal/page"
@@ -59,8 +59,7 @@ func Setup(ctx context.Context) *do.Injector {
 	do.ProvideNamedValue[string](injector, "bucket", os.Getenv("BUCKET"))
 	do.ProvideNamedValue[string](injector, "distribution", os.Getenv("DISTRIBUTION"))
 
-	do.Provide[*handle.HtmlHandler](injector, handle.NewHtmlHandler)
-	do.Provide[*handle.ImageHandler](injector, handle.NewImageHandler)
+	do.Provide[*handler.Handler](injector, handler.NewHandler)
 
 	return injector
 }

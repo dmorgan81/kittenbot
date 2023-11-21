@@ -57,16 +57,6 @@ resource "aws_cloudfront_distribution" "kittenbot" {
     origin_id                = aws_s3_bucket.kittenbot.id
   }
 
-  origin {
-    domain_name = format(
-      "%s.s3.%s.amazonaws.com",
-      aws_s3control_object_lambda_access_point.kittenbot.alias,
-      aws_s3_bucket.kittenbot.region
-    )
-    origin_access_control_id = aws_cloudfront_origin_access_control.kittenbot.id
-    origin_id                = aws_s3control_object_lambda_access_point.kittenbot.id
-  }
-
   default_root_object = "latest.html"
   is_ipv6_enabled     = true
 
@@ -82,16 +72,6 @@ resource "aws_cloudfront_distribution" "kittenbot" {
     allowed_methods            = ["GET", "HEAD"]
     cached_methods             = ["GET", "HEAD"]
     compress                   = true
-    response_headers_policy_id = data.aws_cloudfront_response_headers_policy.security_headers.id
-  }
-
-  ordered_cache_behavior {
-    path_pattern               = "*.html"
-    cache_policy_id            = data.aws_cloudfront_cache_policy.caching_optimized.id
-    target_origin_id           = aws_s3control_object_lambda_access_point.kittenbot.id
-    viewer_protocol_policy     = "redirect-to-https"
-    allowed_methods            = ["GET", "HEAD"]
-    cached_methods             = ["GET", "HEAD"]
     response_headers_policy_id = data.aws_cloudfront_response_headers_policy.security_headers.id
   }
 

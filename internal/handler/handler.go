@@ -1,4 +1,4 @@
-package handle
+package handler
 
 import (
 	"context"
@@ -6,20 +6,21 @@ import (
 
 	"github.com/dmorgan81/kittenbot/internal/image"
 	"github.com/dmorgan81/kittenbot/internal/log"
+	"github.com/dmorgan81/kittenbot/internal/page"
 	"github.com/dmorgan81/kittenbot/internal/prompt"
 	"github.com/dmorgan81/kittenbot/internal/store"
 	"github.com/samber/do"
 	"github.com/samber/lo"
 )
 
-type ImageInput struct {
+type Input struct {
 	Date   string `json:"date,omitempty"`
 	Model  string `json:"model,omitempty"`
 	Prompt string `json:"prompt,omitempty"`
 	Seed   string `json:"seed,omitempty"`
 }
 
-func (i ImageInput) toImageParams() image.Params {
+func (i Input) toImageParams() image.Params {
 	return image.Params{
 		Model:  i.Model,
 		Prompt: i.Prompt,
@@ -27,7 +28,16 @@ func (i ImageInput) toImageParams() image.Params {
 	}
 }
 
-func (i ImageInput) toMetadata() map[string]string {
+func (i Input) toPageParams() page.Params {
+	return page.Params{
+		Image:  i.Date + ".png",
+		Model:  i.Model,
+		Prompt: i.Prompt,
+		Seed:   i.Seed,
+	}
+}
+
+func (i Input) toMetadata() map[string]string {
 	return map[string]string{
 		"date":   i.Date,
 		"model":  i.Model,
@@ -36,32 +46,34 @@ func (i ImageInput) toMetadata() map[string]string {
 	}
 }
 
-type ImageOutput ImageInput
+type Output Input
 
-type ImageHandler struct {
+type Handler struct {
 	randomizer  *prompt.Randomizer
 	generator   image.Generator
 	uploader    store.Uploader
 	invalidator store.Invalidator
+	templator   *page.Templator
 }
 
-func NewImageHandler(i *do.Injector) (*ImageHandler, error) {
-	return &ImageHandler{
+func NewHandler(i *do.Injector) (*Handler, error) {
+	return &Handler{
 		randomizer:  do.MustInvoke[*prompt.Randomizer](i),
 		generator:   do.MustInvoke[image.Generator](i),
 		uploader:    do.MustInvoke[store.Uploader](i),
 		invalidator: do.MustInvoke[store.Invalidator](i),
+		templator:   do.MustInvoke[*page.Templator](i),
 	}, nil
 }
 
-func (h *ImageHandler) Handle(ctx context.Context, input ImageInput) (ImageOutput, error) {
-	log := log.FromContextOrDiscard(ctx).WithGroup("ImageHandler").With("input", input)
+func (h *Handler) Handle(ctx context.Context, input Input) (Output, error) {
+	log := log.FromContextOrDiscard(ctx).WithGroup("Handler").With("input", input)
 	log.Info("handling lambda invocation")
 
 	if input.Model == "" || input.Prompt == "" {
 		model, prompt, err := h.randomizer.Randomize(ctx)
 		if err != nil {
-			return ImageOutput{}, err
+			return Output{}, err
 		}
 		input.Model = lo.Ternary(input.Model != "", input.Model, model)
 		input.Prompt = lo.Ternary(input.Prompt != "", input.Prompt, prompt)
@@ -75,9 +87,14 @@ func (h *ImageHandler) Handle(ctx context.Context, input ImageInput) (ImageOutpu
 
 	img, seed, err := h.generator.Generate(ctx, input.toImageParams())
 	if err != nil {
-		return ImageOutput{}, err
+		return Output{}, err
 	}
 	input.Seed = seed
+
+	html, err := h.templator.Template(ctx, input.toPageParams())
+	if err != nil {
+		return Output{}, err
+	}
 
 	metadata := input.toMetadata()
 	uploads := []store.UploadParams{
@@ -87,18 +104,32 @@ func (h *ImageHandler) Handle(ctx context.Context, input ImageInput) (ImageOutpu
 			ContentType: "image/png",
 			Metadata:    metadata,
 		},
+		{
+			Name:        input.Date + ".html",
+			Data:        html,
+			ContentType: "text/html",
+			Metadata:    metadata,
+		},
 	}
 	if latest {
-		uploads = append(uploads, store.UploadParams{
-			Name:        "latest.png",
-			Data:        img,
-			ContentType: "image/png",
-			Metadata:    metadata,
-		})
+		uploads = append(uploads,
+			store.UploadParams{
+				Name:        "latest.png",
+				Data:        img,
+				ContentType: "image/png",
+				Metadata:    metadata,
+			},
+			store.UploadParams{
+				Name:        "latest.html",
+				Data:        html,
+				ContentType: "text/html",
+				Metadata:    metadata,
+			},
+		)
 	}
 	for _, u := range uploads {
 		if err := h.uploader.Upload(ctx, u); err != nil {
-			return ImageOutput{}, err
+			return Output{}, err
 		}
 	}
 
@@ -107,8 +138,8 @@ func (h *ImageHandler) Handle(ctx context.Context, input ImageInput) (ImageOutpu
 		paths = append(paths, "/latest.png", "/latest.html")
 	}
 	if err := h.invalidator.Invalidate(ctx, paths); err != nil {
-		return ImageOutput{}, err
+		return Output{}, err
 	}
 
-	return ImageOutput(input), nil
+	return Output(input), nil
 }
