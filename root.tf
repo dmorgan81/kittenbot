@@ -27,10 +27,12 @@ provider "aws" {
 module "infra" {
   source = "./infra"
 
-  dezgo_key = var.dezgo_key
-  domain    = var.domain
-  image_tag = var.image_tag
-  prompts   = var.prompts
+  dezgo_key            = var.dezgo_key
+  domain               = var.domain
+  image_tag            = var.image_tag
+  prompts              = var.prompts
+  reddit_client_id     = var.reddit_client_id
+  reddit_client_secret = var.reddit_client_secret
 }
 
 variable "dezgo_key" {
@@ -64,4 +66,16 @@ variable "prompts" {
     condition     = length(var.prompts) > 1
     error_message = "List of models/prompts must not be empty"
   }
+}
+
+variable "reddit_client_id" {
+  type        = string
+  description = "Reddit API client ID"
+  sensitive   = true
+}
+
+variable "reddit_client_secret" {
+  type        = string
+  description = "Reddit API client secret"
+  sensitive   = true
 }

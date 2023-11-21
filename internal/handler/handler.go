@@ -169,8 +169,10 @@ func (h *Handler) Handle(ctx context.Context, input Input) (Output, error) {
 		return Output{}, err
 	}
 
-	if err := h.poster.Post(ctx, input.toPostParams()); err != nil {
-		return Output{}, err
+	if latest {
+		if err := h.poster.Post(ctx, input.toPostParams()); err != nil {
+			return Output{}, err
+		}
 	}
 
 	return Output(input), nil
