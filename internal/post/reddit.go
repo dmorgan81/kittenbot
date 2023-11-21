@@ -20,13 +20,14 @@ func NewRedditPoster(i *do.Injector) (Poster, error) {
 	id := do.MustInvokeNamed[string](i, "reddit_client_id")
 	secret := do.MustInvokeNamed[string](i, "reddit_client_secret")
 	subreddit := do.MustInvokeNamed[string](i, "subreddit")
+	username := do.MustInvokeNamed[string](i, "reddit_username")
 
 	info, _ := debug.ReadBuildInfo()
 	setting := lo.FindOrElse(info.Settings, debug.BuildSetting{Value: "unknown"}, func(s debug.BuildSetting) bool {
 		return s.Key == "vcs.revision"
 	})
 
-	client, err := reddit.NewClient(reddit.Credentials{ID: id, Secret: secret},
+	client, err := reddit.NewClient(reddit.Credentials{ID: id, Secret: secret, Username: username},
 		reddit.WithApplicationOnlyOAuth(true), reddit.WithUserAgent("web:kittenbot:"+setting.Value))
 	if err != nil {
 		return nil, err

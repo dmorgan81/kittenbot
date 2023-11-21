@@ -33,6 +33,7 @@ module "infra" {
   prompts              = var.prompts
   reddit_client_id     = var.reddit_client_id
   reddit_client_secret = var.reddit_client_secret
+  reddit_username      = var.reddit_username
 }
 
 variable "dezgo_key" {
@@ -77,5 +78,11 @@ variable "reddit_client_id" {
 variable "reddit_client_secret" {
   type        = string
   description = "Reddit API client secret"
+  sensitive   = true
+}
+
+variable "reddit_username" {
+  type        = string
+  description = "Reddit API username"
   sensitive   = true
 }

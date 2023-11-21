@@ -72,6 +72,19 @@ resource "aws_ssm_parameter" "reddit_client_secret" {
   value = var.reddit_client_secret
 }
 
+variable "reddit_username" {
+  type        = string
+  description = "Reddit API username"
+  sensitive   = true
+}
+
+resource "aws_ssm_parameter" "reddit_username" {
+  name  = "/kittenbot/reddit/username"
+  type  = "SecureString"
+  tier  = "Standard"
+  value = var.reddit_username
+}
+
 variable "subreddit" {
   type        = string
   description = "Subreddit to post to"
@@ -91,6 +104,7 @@ resource "aws_lambda_function" "kittenbot" {
       "PROMPTS_PARAM" : substr(aws_ssm_parameter.prompts[0].name, 0, length(aws_ssm_parameter.prompts[0].name) - 2)
       "REDDIT_CLIENT_ID_PARAM" : aws_ssm_parameter.reddit_client_id.name
       "REDDIT_CLIENT_SECRET_PARAM" : aws_ssm_parameter.reddit_client_secret.name
+      "REDDIT_USERNAME_PARAM" : aws_ssm_parameter.reddit_username.name
       "BUCKET" : aws_s3_bucket.kittenbot.id
       "DISTRIBUTION" : aws_cloudfront_distribution.kittenbot.id
       "SUBREDDIT" : var.subreddit
@@ -132,7 +146,8 @@ data "aws_iam_policy_document" "lambda" {
     resources = [
       aws_ssm_parameter.dezgo_key.arn,
       aws_ssm_parameter.reddit_client_id.arn,
-      aws_ssm_parameter.reddit_client_secret.arn
+      aws_ssm_parameter.reddit_client_secret.arn,
+      aws_ssm_parameter.reddit_username.arn
     ]
   }
 
