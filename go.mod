@@ -12,6 +12,7 @@ require (
 	github.com/gorilla/feeds v1.1.2
 	github.com/samber/do v1.6.0
 	github.com/samber/lo v1.38.1
+	github.com/sethjones/go-reddit/v2 v2.0.1
 	golang.org/x/sync v0.5.0
 )
 
@@ -31,6 +32,11 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.15.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.21.2 // indirect
 	github.com/aws/smithy-go v1.14.1 // indirect
+	github.com/golang/protobuf v1.2.0 // indirect
+	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	golang.org/x/exp v0.0.0-20230811145659-89c5cff77bcb // indirect
+	golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f // indirect
+	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d // indirect
+	google.golang.org/appengine v1.4.0 // indirect
 )

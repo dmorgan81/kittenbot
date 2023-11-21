@@ -8,6 +8,7 @@ import (
 	"github.com/dmorgan81/kittenbot/internal/image"
 	"github.com/dmorgan81/kittenbot/internal/log"
 	"github.com/dmorgan81/kittenbot/internal/page"
+	"github.com/dmorgan81/kittenbot/internal/post"
 	"github.com/dmorgan81/kittenbot/internal/prompt"
 	"github.com/dmorgan81/kittenbot/internal/store"
 	"github.com/samber/do"
@@ -47,6 +48,15 @@ func (i Input) toMetadata() map[string]string {
 	}
 }
 
+func (i Input) toPostParams() post.Params {
+	return post.Params{
+		Date:   i.Date,
+		Model:  i.Model,
+		Prompt: i.Prompt,
+		Seed:   i.Seed,
+	}
+}
+
 type Output Input
 
 type Handler struct {
@@ -56,6 +66,7 @@ type Handler struct {
 	invalidator    store.Invalidator
 	templator      *page.Templator
 	feedGenerator  *feed.Generator
+	poster         post.Poster
 }
 
 func NewHandler(i *do.Injector) (*Handler, error) {
@@ -66,6 +77,7 @@ func NewHandler(i *do.Injector) (*Handler, error) {
 		invalidator:    do.MustInvoke[store.Invalidator](i),
 		templator:      do.MustInvoke[*page.Templator](i),
 		feedGenerator:  do.MustInvoke[*feed.Generator](i),
+		poster:         do.MustInvoke[post.Poster](i),
 	}, nil
 }
 
@@ -154,6 +166,10 @@ func (h *Handler) Handle(ctx context.Context, input Input) (Output, error) {
 		paths = append(paths, "/latest.png", "/latest.html")
 	}
 	if err := h.invalidator.Invalidate(ctx, paths); err != nil {
+		return Output{}, err
+	}
+
+	if err := h.poster.Post(ctx, input.toPostParams()); err != nil {
 		return Output{}, err
 	}
 

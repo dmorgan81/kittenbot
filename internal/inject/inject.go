@@ -58,8 +58,15 @@ func Setup(ctx context.Context) *do.Injector {
 	do.ProvideNamed[[]string](injector, "prompts", func(i *do.Injector) ([]string, error) {
 		return do.MustInvoke[param.Fetcher](i).FetchAll(ctx, os.Getenv("PROMPTS_PARAM"))
 	})
+	do.ProvideNamed[string](injector, "reddit_client_id", func(i *do.Injector) (string, error) {
+		return do.MustInvoke[param.Fetcher](i).Fetch(ctx, os.Getenv("REDDIT_CLIENT_ID_PARAM"))
+	})
+	do.ProvideNamed[string](injector, "reddit_client_secret", func(i *do.Injector) (string, error) {
+		return do.MustInvoke[param.Fetcher](i).Fetch(ctx, os.Getenv("REDDIT_CLIENT_SECRET_PARAM"))
+	})
 	do.ProvideNamedValue[string](injector, "bucket", os.Getenv("BUCKET"))
 	do.ProvideNamedValue[string](injector, "distribution", os.Getenv("DISTRIBUTION"))
+	do.ProvideNamedValue[string](injector, "subreddit", os.Getenv("SUBREDDIT"))
 
 	do.Provide[*handler.Handler](injector, handler.NewHandler)
 
