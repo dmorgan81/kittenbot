@@ -9,8 +9,10 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/cloudfront v1.28.2
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.38.2
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.37.2
+	github.com/gorilla/feeds v1.1.2
 	github.com/samber/do v1.6.0
 	github.com/samber/lo v1.38.1
+	golang.org/x/sync v0.5.0
 )
 
 require (

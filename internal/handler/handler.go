@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/dmorgan81/kittenbot/internal/feed"
 	"github.com/dmorgan81/kittenbot/internal/image"
 	"github.com/dmorgan81/kittenbot/internal/log"
 	"github.com/dmorgan81/kittenbot/internal/page"
@@ -49,20 +50,22 @@ func (i Input) toMetadata() map[string]string {
 type Output Input
 
 type Handler struct {
-	randomizer  *prompt.Randomizer
-	generator   image.Generator
-	uploader    store.Uploader
-	invalidator store.Invalidator
-	templator   *page.Templator
+	randomizer     *prompt.Randomizer
+	imageGenerator image.Generator
+	uploader       store.Uploader
+	invalidator    store.Invalidator
+	templator      *page.Templator
+	feedGenerator  *feed.Generator
 }
 
 func NewHandler(i *do.Injector) (*Handler, error) {
 	return &Handler{
-		randomizer:  do.MustInvoke[*prompt.Randomizer](i),
-		generator:   do.MustInvoke[image.Generator](i),
-		uploader:    do.MustInvoke[store.Uploader](i),
-		invalidator: do.MustInvoke[store.Invalidator](i),
-		templator:   do.MustInvoke[*page.Templator](i),
+		randomizer:     do.MustInvoke[*prompt.Randomizer](i),
+		imageGenerator: do.MustInvoke[image.Generator](i),
+		uploader:       do.MustInvoke[store.Uploader](i),
+		invalidator:    do.MustInvoke[store.Invalidator](i),
+		templator:      do.MustInvoke[*page.Templator](i),
+		feedGenerator:  do.MustInvoke[*feed.Generator](i),
 	}, nil
 }
 
@@ -85,7 +88,7 @@ func (h *Handler) Handle(ctx context.Context, input Input) (Output, error) {
 		latest = true
 	}
 
-	img, seed, err := h.generator.Generate(ctx, input.toImageParams())
+	img, seed, err := h.imageGenerator.Generate(ctx, input.toImageParams())
 	if err != nil {
 		return Output{}, err
 	}
@@ -133,7 +136,20 @@ func (h *Handler) Handle(ctx context.Context, input Input) (Output, error) {
 		}
 	}
 
-	paths := []string{"/" + input.Date + ".png", "/" + input.Date + ".html"}
+	feed, err := h.feedGenerator.Generate(ctx)
+	if err != nil {
+		return Output{}, err
+	}
+
+	if err := h.uploader.Upload(ctx, store.UploadParams{
+		Name:        "feed.xml",
+		Data:        feed,
+		ContentType: "text/xml",
+	}); err != nil {
+		return Output{}, err
+	}
+
+	paths := []string{"/" + input.Date + ".png", "/" + input.Date + ".html", "feed.xml"}
 	if latest {
 		paths = append(paths, "/latest.png", "/latest.html")
 	}

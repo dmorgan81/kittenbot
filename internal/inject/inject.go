@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudfront"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	"github.com/dmorgan81/kittenbot/internal/feed"
 	"github.com/dmorgan81/kittenbot/internal/handler"
 	"github.com/dmorgan81/kittenbot/internal/image"
 	"github.com/dmorgan81/kittenbot/internal/log"
@@ -49,6 +50,7 @@ func Setup(ctx context.Context) *do.Injector {
 	do.Provide[store.Uploader](injector, store.NewS3Uploader)
 	do.Provide[store.Invalidator](injector, store.NewCloudFrontInvalidator)
 	do.Provide[*page.Templator](injector, page.NewTemplator)
+	do.Provide[*feed.Generator](injector, feed.NewS3Generator)
 
 	do.ProvideNamed[string](injector, "dezgo_key", func(i *do.Injector) (string, error) {
 		return do.MustInvoke[param.Fetcher](i).Fetch(ctx, os.Getenv("DEZGO_KEY_PARAM"))
