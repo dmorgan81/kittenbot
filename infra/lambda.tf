@@ -93,7 +93,7 @@ resource "aws_lambda_function" "kittenbot" {
       "REDDIT_CLIENT_SECRET_PARAM" : aws_ssm_parameter.reddit_client_secret.name
       "BUCKET" : aws_s3_bucket.kittenbot.id
       "DISTRIBUTION" : aws_cloudfront_distribution.kittenbot.id
-      "SUBREDDIT": var.subreddit
+      "SUBREDDIT" : var.subreddit
     }
   }
 
@@ -128,8 +128,12 @@ resource "aws_iam_policy" "lambda" {
 
 data "aws_iam_policy_document" "lambda" {
   statement {
-    actions   = ["ssm:GetParameter"]
-    resources = [aws_ssm_parameter.dezgo_key.arn]
+    actions = ["ssm:GetParameter"]
+    resources = [
+      aws_ssm_parameter.dezgo_key.arn,
+      aws_ssm_parameter.reddit_client_id.arn,
+      aws_ssm_parameter.reddit_client_secret.arn
+    ]
   }
 
   statement {
