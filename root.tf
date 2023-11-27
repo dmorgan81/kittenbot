@@ -33,6 +33,7 @@ module "infra" {
   prompts              = var.prompts
   reddit_client_id     = var.reddit_client_id
   reddit_client_secret = var.reddit_client_secret
+  reddit_password      = var.reddit_password
   reddit_username      = var.reddit_username
 }
 
@@ -78,6 +79,12 @@ variable "reddit_client_id" {
 variable "reddit_client_secret" {
   type        = string
   description = "Reddit API client secret"
+  sensitive   = true
+}
+
+variable "reddit_password" {
+  type        = string
+  description = "Reddit API password"
   sensitive   = true
 }
 
