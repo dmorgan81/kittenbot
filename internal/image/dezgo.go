@@ -17,7 +17,7 @@ type DezgoGenerator struct {
 }
 
 func NewDezgoGenerator(i *do.Injector) (Generator, error) {
-	client := do.MustInvoke[*http.Client](i)
+	client := &http.Client{}
 	key := do.MustInvokeNamed[string](i, "dezgo_key")
 	return &DezgoGenerator{client, key}, nil
 }

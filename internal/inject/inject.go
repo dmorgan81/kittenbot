@@ -3,7 +3,6 @@ package inject
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -43,7 +42,6 @@ func Setup(ctx context.Context) *do.Injector {
 	do.Provide[*cloudfront.Client](injector, func(i *do.Injector) (*cloudfront.Client, error) {
 		return cloudfront.NewFromConfig(do.MustInvoke[aws.Config](i)), nil
 	})
-	do.ProvideValue[*http.Client](injector, http.DefaultClient)
 
 	do.Provide[param.Fetcher](injector, param.NewParameterStoreFetcher)
 	do.Provide[*prompt.Randomizer](injector, prompt.NewRandomizer)

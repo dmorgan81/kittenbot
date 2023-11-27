@@ -23,7 +23,7 @@ func NewRedditPoster(i *do.Injector) (Poster, error) {
 		Username: do.MustInvokeNamed[string](i, "reddit_username"),
 		Password: do.MustInvokeNamed[string](i, "reddit_password"),
 	}
-	client, err := reddit.NewClient(creds, reddit.WithHTTPClient(do.MustInvoke[*http.Client](i)))
+	client, err := reddit.NewClient(creds, reddit.WithHTTPClient(&http.Client{}))
 	if err != nil {
 		return nil, err
 	}
