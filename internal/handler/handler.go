@@ -15,11 +15,23 @@ import (
 	"github.com/samber/lo"
 )
 
+type Phase string
+
+const (
+	PhaseImage      Phase = "image"
+	PhaseFeed       Phase = "feed"
+	PhaseInvalidate Phase = "invalidate"
+	PhasePost       Phase = "post"
+)
+
+var AllPhases = []Phase{PhaseImage, PhaseFeed, PhaseInvalidate, PhasePost}
+
 type Input struct {
-	Date   string `json:"date,omitempty"`
-	Model  string `json:"model,omitempty"`
-	Prompt string `json:"prompt,omitempty"`
-	Seed   string `json:"seed,omitempty"`
+	Date   string  `json:"date,omitempty"`
+	Model  string  `json:"model,omitempty"`
+	Prompt string  `json:"prompt,omitempty"`
+	Seed   string  `json:"seed,omitempty"`
+	Phases []Phase `json:"phases,omitempty"`
 }
 
 func (i Input) toImageParams() image.Params {
@@ -85,6 +97,11 @@ func (h *Handler) Handle(ctx context.Context, input Input) (Output, error) {
 	log := log.FromContextOrDiscard(ctx).WithGroup("Handler").With("input", input)
 	log.Info("handling lambda invocation")
 
+	if len(input.Phases) == 0 {
+		input.Phases = AllPhases
+	}
+	log.Info("", "phases", input.Phases)
+
 	if input.Model == "" || input.Prompt == "" {
 		model, prompt, err := h.randomizer.Randomize(ctx)
 		if err != nil {
@@ -100,82 +117,86 @@ func (h *Handler) Handle(ctx context.Context, input Input) (Output, error) {
 		latest = true
 	}
 
-	img, seed, err := h.imageGenerator.Generate(ctx, input.toImageParams())
-	if err != nil {
-		return Output{}, err
-	}
-	input.Seed = seed
+	if lo.Contains(input.Phases, PhaseImage) {
+		img, seed, err := h.imageGenerator.Generate(ctx, input.toImageParams())
+		if err != nil {
+			return Output{}, err
+		}
+		input.Seed = seed
 
-	html, err := h.templator.Template(ctx, input.toPageParams())
-	if err != nil {
-		return Output{}, err
-	}
+		html, err := h.templator.Template(ctx, input.toPageParams())
+		if err != nil {
+			return Output{}, err
+		}
 
-	metadata := input.toMetadata()
-	uploads := []store.UploadParams{
-		{
-			Name:        input.Date + ".png",
-			Data:        img,
-			ContentType: "image/png",
-			Metadata:    metadata,
-		},
-		{
-			Name:        input.Date + ".html",
-			Data:        html,
-			ContentType: "text/html",
-			Metadata:    metadata,
-		},
-	}
-	if latest {
-		uploads = append(uploads,
-			store.UploadParams{
-				Name:        "latest.png",
+		metadata := input.toMetadata()
+		uploads := []store.UploadParams{
+			{
+				Name:        input.Date + ".png",
 				Data:        img,
 				ContentType: "image/png",
 				Metadata:    metadata,
 			},
-			store.UploadParams{
-				Name:        "latest.html",
+			{
+				Name:        input.Date + ".html",
 				Data:        html,
 				ContentType: "text/html",
 				Metadata:    metadata,
 			},
-		)
+		}
+		if latest {
+			uploads = append(uploads,
+				store.UploadParams{
+					Name:        "latest.png",
+					Data:        img,
+					ContentType: "image/png",
+					Metadata:    metadata,
+				},
+				store.UploadParams{
+					Name:        "latest.html",
+					Data:        html,
+					ContentType: "text/html",
+					Metadata:    metadata,
+				},
+			)
+		}
+		for _, u := range uploads {
+			if err := h.uploader.Upload(ctx, u); err != nil {
+				return Output{}, err
+			}
+		}
 	}
-	for _, u := range uploads {
-		if err := h.uploader.Upload(ctx, u); err != nil {
+
+	if lo.Contains(input.Phases, PhaseFeed) {
+		feed, err := h.feedGenerator.Generate(ctx)
+		if err != nil {
+			return Output{}, err
+		}
+
+		if err := h.uploader.Upload(ctx, store.UploadParams{
+			Name:        "feed.xml",
+			Data:        feed,
+			ContentType: "text/xml",
+		}); err != nil {
 			return Output{}, err
 		}
 	}
 
-	feed, err := h.feedGenerator.Generate(ctx)
-	if err != nil {
-		return Output{}, err
-	}
-
-	if err := h.uploader.Upload(ctx, store.UploadParams{
-		Name:        "feed.xml",
-		Data:        feed,
-		ContentType: "text/xml",
-	}); err != nil {
-		return Output{}, err
-	}
-
-	paths := []string{"/" + input.Date + ".png", "/" + input.Date + ".html", "/feed.xml"}
-	if latest {
-		paths = append(paths, "/latest.png", "/latest.html")
-	}
-	if err := h.invalidator.Invalidate(ctx, paths); err != nil {
-		return Output{}, err
-	}
-
-	/*
+	if lo.Contains(input.Phases, PhaseInvalidate) {
+		paths := []string{"/" + input.Date + ".png", "/" + input.Date + ".html", "/feed.xml"}
 		if latest {
-			if err := h.poster.Post(ctx, input.toPostParams()); err != nil {
-				return Output{}, err
-			}
+			paths = append(paths, "/latest.png", "/latest.html")
 		}
-	*/
+		if err := h.invalidator.Invalidate(ctx, paths); err != nil {
+			return Output{}, err
+		}
+	}
+
+	if latest && lo.Contains(input.Phases, PhasePost) {
+		if err := h.poster.Post(ctx, input.toPostParams()); err != nil {
+			return Output{}, err
+		}
+	}
 
 	return Output(input), nil
 }

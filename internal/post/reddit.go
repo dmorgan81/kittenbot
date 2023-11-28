@@ -3,7 +3,6 @@ package post
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	"github.com/dmorgan81/kittenbot/internal/log"
 	"github.com/samber/do"
@@ -23,7 +22,7 @@ func NewRedditPoster(i *do.Injector) (Poster, error) {
 		Username: do.MustInvokeNamed[string](i, "reddit_username"),
 		Password: do.MustInvokeNamed[string](i, "reddit_password"),
 	}
-	client, err := reddit.NewClient(creds, reddit.WithHTTPClient(&http.Client{}))
+	client, err := reddit.NewClient(creds)
 	if err != nil {
 		return nil, err
 	}
