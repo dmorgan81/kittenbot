@@ -1,5 +1,4 @@
 prompts = [
-  /*
   {
     model  = "foto_assisted_diffusion"
     prompt = "cute kitten"
@@ -36,15 +35,4 @@ prompts = [
     model  = "stable_diffusion_papercut"
     prompt = "PaperCut, cute kitten"
   },
-  */
-  {
-    # Remove after December 25
-    model  = "dreamshaper_8"
-    prompt = "cute kitten hiding in a Christmas tree"
-  },
-  {
-    # Remove after December 25
-    model  = "stable_diffusion_papercut"
-    prompt = "PaperCut, cute kitten wearing a Santa hat"
-  }
 ]
