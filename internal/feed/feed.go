@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/dmorgan81/kittenbot/internal/log"
@@ -14,6 +15,8 @@ import (
 	"github.com/samber/lo"
 	"golang.org/x/sync/errgroup"
 )
+
+const last30Days = time.Hour * 24 * 30
 
 type Generator struct {
 	client *s3.Client
@@ -37,8 +40,10 @@ func (g *Generator) Generate(ctx context.Context) ([]byte, error) {
 		Updated:     time.Now(),
 	}
 
+	start := time.Now().Add(-last30Days).Format("20060102")
 	pager := s3.NewListObjectsV2Paginator(g.client, &s3.ListObjectsV2Input{
-		Bucket: &g.bucket,
+		Bucket:     &g.bucket,
+		StartAfter: aws.String(start + ".png"),
 	})
 
 	items := make(chan *feeds.Item)

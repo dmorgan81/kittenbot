@@ -24,7 +24,7 @@ const (
 	PhasePost       Phase = "post"
 )
 
-var AllPhases = []Phase{PhaseImage, PhaseInvalidate, PhasePost}
+var AllPhases = []Phase{PhaseImage, PhaseFeed, PhaseInvalidate, PhasePost}
 
 type Input struct {
 	Date   string  `json:"date,omitempty"`

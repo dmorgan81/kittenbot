@@ -109,7 +109,7 @@ resource "aws_lambda_function" "kittenbot" {
   role          = aws_iam_role.lambda.arn
   image_uri     = local.image_uri
   package_type  = "Image"
-  timeout       = 30
+  timeout       = 60
 
   environment {
     variables = {
