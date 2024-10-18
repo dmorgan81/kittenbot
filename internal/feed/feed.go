@@ -3,7 +3,7 @@ package feed
 import (
 	"context"
 	"fmt"
-	"strings"
+	"regexp"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -62,8 +62,9 @@ func (g *Generator) Generate(ctx context.Context) ([]byte, error) {
 			return nil, err
 		}
 
+		pattern := regexp.MustCompile(`^\d{8}\.png$`)
 		objs := lo.Filter(page.Contents, func(o s3types.Object, _ int) bool {
-			return strings.HasSuffix(*o.Key, ".png") && !strings.HasPrefix(*o.Key, "latest")
+			return pattern.MatchString(*o.Key)
 		})
 
 		for _, obj := range objs {
